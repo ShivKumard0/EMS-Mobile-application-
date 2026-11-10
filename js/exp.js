@@ -357,7 +357,7 @@ route('/benefits',function(){const p=me(),c=myCards()[0],mon=MFmt.MONTH[todayD()
 
 /* ── Receipt scan: Expenses -> New request -> Scan receipt (PaddleOCR in the browser, js/ocr.js) ── */
 function rqScan(file){const f=M.state.rq;
-  sheet('Scan receipt','<div style="text-align:center;padding:14px 0 6px"><div class="spin dark" style="margin:0 auto 14px"></div><div class="b" id="sc-step">Preparing the receipt reader\u2026</div><div class="cap" style="margin-top:6px">The first scan downloads the reader (about 40 MB). After that a receipt takes a few seconds.</div></div>');
+  sheet('Scan receipt','<div style="text-align:center;padding:14px 0 6px"><div class="spin dark" style="margin:0 auto 14px"></div><div class="b" id="sc-step">Preparing the receipt reader\u2026</div><div class="cap" style="margin-top:6px">The first scan downloads the receipt reader once (about 20 MB). After that a receipt takes a few seconds.</div></div>');
   MOcr.read(file,TODAY(),function(t){const el=document.getElementById('sc-step');if(el)el.textContent=t;}).then(function(res){
       closeSheet();rqApplyScan(f,res,file);render();
       const n=f.scan.filled.filter(function(x){return x!=='Receipt';}).length;

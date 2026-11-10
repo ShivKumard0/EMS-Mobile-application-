@@ -1,6 +1,6 @@
 /* ══ Receipt scanning: PaddleOCR (PP-OCRv4, ONNX) in the phone's browser ═════
    No server: the photo is read on the phone and never leaves it. The reader
-   (ONNX Runtime + PaddleOCR models, about 40 MB) is downloaded the first time
+   (ONNX Runtime + PaddleOCR models: about 20 MB over the network, 40 MB unpacked) is downloaded the first time
    and kept by the browser after that.
    MOcr.read(file) -> {rows:[text lines top to bottom], fields:{merchant, date,
    amount, invoice, gstin, tax, currency, subCat, expType, title, lineTitle}}.
