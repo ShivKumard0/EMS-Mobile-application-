@@ -19,6 +19,10 @@ const MOcr=(function(){
         window.ort.env.wasm.numThreads=1;          // GitHub Pages has no cross-origin isolation: one thread
         return script('ocr/paddle-ocr.js'+V);})
       .then(function(){return window.GutenOcr.create({models:{detectionPath:'ocr/ch_PP-OCRv4_det_infer.onnx',recognitionPath:'ocr/ch_PP-OCRv4_rec_infer.onnx',dictionaryPath:'ocr/ppocr_keys_v1.txt'}});})
+      .then(function(o){
+        /* The reader is now saved on the phone (sw.js). Ask the browser to keep that store even when space runs low. */
+        try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(function(){});}catch(e){}
+        return o;})
       .catch(function(e){ready=null;throw e;});
     return ready;
   }
