@@ -288,3 +288,10 @@ svg{display:block}
 .scan:active{background:#FAFAFB}
 .inp.auto{background:#FFFBEB;border-color:#FCD34D}
 .spin.dark{width:34px;height:34px;border-width:3px;border-color:rgba(15,23,42,.12);border-top-color:var(--ink)}
+
+/* ── Phone with "Desktop site" on (index.html zooms the page back to the phone's width) ── */
+html.dsk,html.dsk body{background:var(--canvas)}
+html.dsk #app{box-shadow:none}
+/* Screen-height units are zoomed too, so use the real screen height that index.html measures (--vh). */
+html.dsk #app,html.dsk .pick{min-height:calc(var(--vh) * 100)}
+html.dsk .sheet{max-height:calc(var(--vh) * 88)}

@@ -374,4 +374,4 @@ function rqApplyScan(f,res,file){const x=res.fields,filled=[];f.type='claim';f.a
   l.ocr={engine:'PaddleOCR PP-OCRv4',fields:x,rows:(res.rows||[]).slice(0,80)};
   f.scan={filled:filled,rows:res.rows||[],fields:x};}
 M.acts.scanText=function(){const f=M.state.rq;if(!f||!f.scan)return;rqRead();
-  sheet('Scanned text','<div class="cap" style="margin-bottom:8px">What the reader found on the receipt, top to bottom.</div><div style="font:13px/19px ui-monospace,Menlo,Consolas,monospace;background:var(--muted);border-radius:10px;padding:12px;white-space:pre-wrap;word-break:break-word;max-height:55vh;overflow:auto">'+E((f.scan.rows||[]).join('\n')||'No text found.')+'</div>');};
+  sheet('Scanned text','<div class="cap" style="margin-bottom:8px">What the reader found on the receipt, top to bottom.</div><div style="font:13px/19px ui-monospace,Menlo,Consolas,monospace;background:var(--muted);border-radius:10px;padding:12px;white-space:pre-wrap;word-break:break-word;max-height:calc(var(--vh,1vh) * 55);overflow:auto">'+E((f.scan.rows||[]).join('\n')||'No text found.')+'</div>');};

@@ -13,17 +13,33 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
-<link rel="stylesheet" href="css/mobile.css?v=20261110f">
+<script>
+/* Phone with the browser's "Desktop site" on: the viewport tag is ignored and the page is laid out
+   about 980 px wide, then shrunk to the screen, so the app looks tiny. Zoom it back to the phone's
+   own width. A normal phone, a tablet and a computer are left alone. */
+(function(){
+  var d=document.documentElement;
+  function fit(){
+    var sw=screen.width,w=window.innerWidth,touch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+    if(touch&&sw&&sw<=500&&w>sw*1.25){
+      var z=w/sw;d.style.zoom=z.toFixed(4);d.classList.add('dsk');
+      d.style.setProperty('--vh',(window.innerHeight/z/100).toFixed(3)+'px');
+    }else if(d.classList.contains('dsk')){d.style.zoom='';d.classList.remove('dsk');d.style.removeProperty('--vh');}
+  }
+  fit();window.addEventListener('resize',fit);window.addEventListener('orientationchange',function(){setTimeout(fit,250);});
+})();
+</script>
+<link rel="stylesheet" href="css/mobile.css?v=20261110g">
 </head>
 <body>
 <div id="app"></div>
 <noscript>Turn on JavaScript to use ADT.</noscript>
-<script src="js/data.js?v=20261110f"></script>
-<script src="js/hr-data.js?v=20261110f"></script>
-<script src="js/store.js?v=20261110f"></script>
-<script src="js/app.js?v=20261110f"></script>
-<script src="js/hr.js?v=20261110f"></script>
-<script src="js/ocr.js?v=20261110f"></script>
-<script src="js/exp.js?v=20261110f"></script>
+<script src="js/data.js?v=20261110g"></script>
+<script src="js/hr-data.js?v=20261110g"></script>
+<script src="js/store.js?v=20261110g"></script>
+<script src="js/app.js?v=20261110g"></script>
+<script src="js/hr.js?v=20261110g"></script>
+<script src="js/ocr.js?v=20261110g"></script>
+<script src="js/exp.js?v=20261110g"></script>
 </body>
 </html>
