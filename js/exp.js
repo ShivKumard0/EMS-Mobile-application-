@@ -146,11 +146,11 @@ function rqRead(){const f=M.state.rq;if(!f)return;const g=function(id,d){const e
 route('/expenses/new',function(){if(!M.state.rq)M.state.rq=rqBlank();const f=M.state.rq,p=me(),reps=P.reports(p);
   const owner=f.forWho==='team'&&f.forEid?P.byEid(f.forEid):p;
   const A=f.auto||{};
-  /* Scan receipt: one slim row with two round buttons. The camera button needs capture: without it newer
-     Android phones open only the gallery. The gallery button picks a photo already on the phone. */
-  let html='<div class="scan scan-row"><div class="row-m"><div class="b">Scan receipt</div><div class="cap">Details fill in for you</div></div>'
-    +'<label class="scan-ib dark" aria-label="Take photo" title="Take photo">'+ic('camera',20)+'<input type="file" id="rq-scan" accept="image/*" capture="environment"></label>'
-    +'<label class="scan-ib" aria-label="Choose from gallery" title="Gallery">'+ic('image',20)+'<input type="file" id="rq-scan-g" accept="image/*"></label></div>';
+  /* Scan receipt: title, then Take photo and Gallery. Take photo needs capture: without it newer
+     Android phones open only the gallery. Gallery picks a photo already on the phone. */
+  let html='<div class="scan scan-card"><div class="scan-h"><span class="ico">'+ic('camera',20)+'</span><div class="row-m"><div class="b">Scan receipt</div><div class="cap">Details fill in for you</div></div></div>'
+    +'<div class="pick2"><label class="btn pick-b">'+ic('camera',18)+'Take photo<input type="file" id="rq-scan" accept="image/*" capture="environment"></label>'
+    +'<label class="btn sec pick-b">'+ic('image',18)+'Gallery<input type="file" id="rq-scan-g" accept="image/*"></label></div></div>';
   if(f.scan)html+='<div class="callout ok" style="margin:0 0 12px"><b>Filled from the receipt:</b> '+E(f.scan.filled.join(', '))+'. Check the highlighted fields and fill the rest.'+(f.scan.fields.tax?'<div class="cap" style="margin-top:4px">GST on receipt '+money(f.scan.fields.tax)+(f.scan.fields.gstin?' · GSTIN '+E(f.scan.fields.gstin):'')+'</div>':'')+(f.scan.fields.currency&&f.scan.fields.currency!=='INR'?'<div class="cap warn-t" style="margin-top:4px">The receipt is in '+E(f.scan.fields.currency)+'. Enter the amount in INR.</div>':'')+'<div style="margin-top:6px"><button class="link" data-act="scanText">View scanned text</button></div></div>';
   html+='<div class="card"><div class="lbl" style="margin-bottom:6px">Category <span class="req">*</span></div><div class="seg"><button class="'+(f.type==='claim'?'on':'')+'" data-act="rqType" data-t="claim">Expense claim</button><button class="'+(f.type==='advance'?'on':'')+'" data-act="rqType" data-t="advance">Advance</button></div>'
    +field('Title',input('rq-title',f.title,{ph:f.type==='claim'?'e.g. Client visit — Whitefield':'e.g. Pune client visits',auto:A.title}),{req:true});
