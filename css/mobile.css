@@ -321,3 +321,10 @@ html.dsk .sheet{max-height:calc(var(--vh) * 88)}
 .viewer-spin{margin:auto;border-color:rgba(255,255,255,.2);border-top-color:#fff}
 .viewer-miss{margin:auto;color:#CBD5E1;padding:32px 24px;text-align:center}
 .viewer-hint{text-align:center;font-size:12px;line-height:16px;color:#94A3B8;padding:8px 0 calc(var(--safe-b) + 10px)}
+
+/* ── Take photo / Gallery or Upload file: two buttons, so the camera always opens on "Take photo" ── */
+.scan.scan2{display:block;cursor:default}
+.scan2 .scan-h{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.pick2{display:flex;gap:10px;margin-top:6px}
+.pick-b{position:relative;overflow:hidden;flex:1;min-width:0;height:44px;cursor:pointer}
+.pick-b input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
