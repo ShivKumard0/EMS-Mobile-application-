@@ -30,7 +30,7 @@ async function fromReader(req) {
 async function fromApp(req) {
   const cache = await caches.open(SHELL);
   try {
-    const res = await fetch(req);
+    const res = await fetch(req, { cache: 'no-cache' });   // always ask the server (GitHub keeps pages 10 min otherwise)
     if (res.status === 200 && res.type === 'basic') cache.put(req, res.clone());
     return res;
   } catch (err) {

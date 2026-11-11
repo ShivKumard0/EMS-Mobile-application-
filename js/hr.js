@@ -65,7 +65,7 @@ route('/home',function(){const p=me(),ls=leaveStats(p),wm=weekMins(p),wt=weekTar
   const hol=MStore.db.hr.holidays.filter(function(x){return x.date>=TODAY();})[0];
   const anns=MStore.db.hr.announcements.slice(0,2),rd=MStore.db.reads[myUid()]||{};
   const att=expAttention(),appr=approvalsFor(myUid()).length;
-  let html='<div class="stack">'+clockCard(false)
+  let html='<div class="stack">'+kycBanner(p)+clockCard(false)
    +'<div class="tiles"><div class="tile" data-go="#/leaves"><span class="lbl">Leave balance</span><div class="val">'+ls.avail+'</div><div class="bar5"><i style="width:'+(ls.total?Math.round(ls.avail/ls.total*100):0)+'%"></i></div><div class="cap">of '+ls.total+' days · '+ls.taken+' used</div></div>'
    +'<div class="tile" data-go="#/attendance"><span class="lbl">This week</span><div class="val">'+hm(wm)+'</div><div class="bar5 ink"><i style="width:'+Math.min(100,Math.round(wm/wt*100))+'%"></i></div><div class="cap">'+(wm>=wt?'Target met':hm(wt-wm)+' to '+Math.round(wt/60)+'h')+'</div></div></div>';
   if(appr||att.length){html+='<div class="card"><div class="card-h"><span class="card-t">Needs your attention</span></div>'
@@ -181,6 +181,7 @@ route('/profile',function(){const p=me(),c=completeness(p),ent=MStore.db.entity.
   const html='<div class="card"><div style="display:flex;gap:14px;align-items:center"><span class="av lg">'+E(MFmt.initials(p.name))+'</span><div style="min-width:0"><div class="b" style="font-size:20px;line-height:26px">'+E(p.name)+'</div><div class="meta">'+E(p.jobTitle)+' · '+E(p.empId)+'</div><div class="cap">'+E(ent)+' · '+E(p.desc||'Full Time')+'</div></div></div>'
    +'<div style="display:flex;justify-content:space-between;margin-top:14px" class="lbl"><span>Profile completeness</span><span class="b" style="color:var(--ink)">'+c.pct+'%</span></div><div class="bar5"><i style="width:'+c.pct+'%"></i></div><div class="cap">'+E(c.hint)+'</div></div>'
    +'<div class="tiles" style="margin-top:12px">'+tile('info','Basic details','Name, role, date of birth, emergency contact','#/profile/basic')+tile('contact','Contact details','Phone, email, address','#/profile/contact')+tile('bank','Bank details','Salary account, UAN, PAN','#/profile/bank')+tile('file','Documents','KYC and issued papers','#/profile/documents')+'</div>'
+   +(kycNeeded(p)||kycRec(p)?'<div class="card p0" style="margin-top:12px">'+rowHTML({icon:'id',t:'Card KYC',s:(kycRec(p)||{}).status==='Submitted'?'Submitted · HR is reviewing it':'Needed for your company card · '+kycPct(p)+'% done',go:'#/kyc',r:(kycRec(p)||{}).status==='Submitted'?badge('Under review','warn'):badge('Pending','bad')})+'</div>':'')
    +'<div class="card p0" style="margin-top:12px">'+rowHTML({icon:'swap',t:'Switch user',s:'Signed in as '+E(p.name),act:'switchUser',r:'<span class="link">Switch</span>'})+'</div>';
   return {title:'My profile',up:'#/more',tab:'more',html:html};});
 route('/profile/basic',function(){const p=me(),h=myHR(),mgr=P.byEid(p.managerEid);

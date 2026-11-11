@@ -29,22 +29,35 @@
   fit();window.addEventListener('resize',fit);window.addEventListener('orientationchange',function(){setTimeout(fit,250);});
 })();
 </script>
-<link rel="stylesheet" href="css/mobile.css?v=20261111h">
+<link rel="stylesheet" href="css/mobile.css?v=20261111i">
 </head>
 <body>
 <div id="app"></div>
 <noscript>Turn on JavaScript to use ADT.</noscript>
-<script src="js/data.js?v=20261111h"></script>
-<script src="js/hr-data.js?v=20261111h"></script>
-<script src="js/store.js?v=20261111h"></script>
-<script src="js/app.js?v=20261111h"></script>
-<script src="js/hr.js?v=20261111h"></script>
-<script src="js/ocr.js?v=20261111h"></script>
-<script src="js/att.js?v=20261111h"></script>
-<script src="js/exp.js?v=20261111h"></script>
+<script src="js/data.js?v=20261111i"></script>
+<script src="js/hr-data.js?v=20261111i"></script>
+<script src="js/store.js?v=20261111i"></script>
+<script src="js/app.js?v=20261111i"></script>
+<script src="js/hr.js?v=20261111i"></script>
+<script src="js/ocr.js?v=20261111i"></script>
+<script src="js/att.js?v=20261111i"></script>
+<script src="js/exp.js?v=20261111i"></script>
+<script src="js/kyc.js?v=20261111i"></script>
 <script>
 /* Offline store (sw.js): keeps the receipt reader on the phone and lets the app open without internet. */
 if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
+/* New version: when the app is opened again (from the background), it checks for a newer version and reloads itself,
+   except while a form or a sheet is open, so nothing typed is lost. */
+(function(){
+  if(!/^https?:$/.test(location.protocol))return;
+  function cur(){var s=document.querySelector('script[src*="js/app.js"]'),m=s&&/v=(\w+)/.exec(s.getAttribute('src'));return m?m[1]:'';}
+  function busy(){return /^#\/(expenses\/new|t\/[^\/]+\/dispute)/.test(location.hash)||!!document.getElementById('sheet');}
+  var on=false;
+  function check(){if(on||navigator.onLine===false)return;on=true;
+    fetch('./',{cache:'no-store'}).then(function(r){return r.ok?r.text():'';}).then(function(t){on=false;var m=/js\/app\.js\?v=(\w+)/.exec(t);if(m&&cur()&&m[1]!==cur()&&!busy())location.reload();}).catch(function(){on=false;});}
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')check();});
+  window.addEventListener('pageshow',function(e){if(e.persisted)check();});
+})();
 </script>
 </body>
 </html>

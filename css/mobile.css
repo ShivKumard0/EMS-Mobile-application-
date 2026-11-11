@@ -355,3 +355,30 @@ html.dsk .sheet{max-height:calc(var(--vh) * 88)}
 .scan-card .cap{margin-top:1px}
 .scan-card .pick2{margin-top:14px}
 .scan-card .pick-b{height:44px;font-size:14px}
+/* ── Card KYC banner on Home (onboarding) ── */
+.kyc-bn{display:flex;align-items:center;gap:12px;width:100%;padding:10px 10px 10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.05);text-align:left}
+.kyc-bn:active{background:var(--muted)}
+.kyc-w{display:flex;flex-shrink:0}
+.kyc-t{flex:1;min-width:0;font-size:15px;line-height:20px;font-weight:600;color:var(--ink)}
+.kyc-go{width:38px;height:38px;border-radius:10px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.kyc-w.wait{width:32px;height:32px;border-radius:50%;background:var(--warn-bg);color:var(--warn);align-items:center;justify-content:center;margin-left:-4px}
+/* ── Card KYC form ── */
+.ky-steps{display:flex;gap:6px}
+.ky-steps i{flex:1;height:4px;border-radius:2px;background:var(--border)}
+.ky-steps i.on{background:var(--ink)}
+.upl{position:relative;display:flex;align-items:center;gap:10px;width:100%;min-height:48px;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:0 13px;cursor:pointer}
+.upl.err{border-color:var(--bad)}
+.upl input[type=file]{position:absolute;inset:0;opacity:0;width:100%;cursor:pointer}
+.upl-t{flex:1;color:var(--gray);font-size:15px}
+.upl-i{color:var(--ink);display:flex}
+.upl.done{padding:8px 10px 8px 8px;cursor:default}
+.upl-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.upl-n{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upl-ok{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--ok)}
+.upl-c{position:relative;flex-shrink:0;font-size:13px;font-weight:500;color:var(--orange);padding:8px 4px;cursor:pointer}
+.upl-c input[type=file]{position:absolute;inset:0;opacity:0;width:100%}
+.inp.lock.vbox{color:var(--ink);font-size:15px;line-height:20px;padding-top:12px;padding-bottom:12px}
+.vf{display:flex;justify-content:flex-end;align-items:center;gap:4px;margin-top:6px;font-size:12px;line-height:16px;font-weight:600;color:var(--ok)}
+.kyc-load{position:fixed;inset:0;z-index:90;background:rgba(255,255,255,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;animation:fi .15s ease}
+.kyc-load .spin{margin-bottom:6px}
+.chk .ck{width:20px;height:20px;border-radius:4px;background:var(--black);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
