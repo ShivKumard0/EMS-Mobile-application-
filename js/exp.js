@@ -305,19 +305,42 @@ M.acts.apTab=function(el){M.state.apTab=el.getAttribute('data-t');render();};
 /* ── My cards & wallets ── */
 function cardAvail(c){return (c.wallets||[]).reduce(function(s,w){return s+(w.balance||0);},0);}
 function cardTxns(c){return DB().txns.filter(function(t){return t.cardId===c.id;}).sort(function(a,b){return (b.id||0)-(a.id||0);});}
-function cardVisual(c){const p=P.byEid(c.employeeEid)||{};const d=MFmt.iso(c.issueDate)||todayD();const st=c.status==='Blocked'?'Blocked':c.hold?'On hold':c.status;
-  return '<div class="pcard'+(c.hold||c.status==='Blocked'?' held':'')+'"><div class="top"><span class="co">'+E(MStore.db.entity.name.replace(' Pvt Ltd',''))+'</span><span class="st">'+E(st)+'</span></div><div class="chip"></div><div class="no">•••• •••• •••• '+E(c.last4)+'</div><div class="bot"><div><div class="k">Card holder</div><div>'+E(String(p.name||'').toUpperCase())+'</div></div><div><div class="k">Valid thru</div><div>'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getFullYear()+5).slice(2)+'</div></div><div style="text-align:right"><div class="k">Type</div><div class="b">'+E(c.type||'Virtual')+'</div></div></div></div>';}
+/* The card drawn as the web app draws it (My Cards): number and expiry blurred until the card is tapped.
+   The number is worked out the same way as the web card, from the card's own reference, and never saved. */
+const CARD_BANK={rbl:'RBL Bank',icici:'ICICI Bank'};
+function cardProg(c){return c.programme||(String(MStore.db.entity.name||'').split(' ')[0]+' Multi Wallet Card').trim();}
+function cardSecret(c){const l4=String(c.last4||'----');let h=2166136261;
+  (String(c.ref||'').split('-').pop()+'|'+c.id+'|'+c.employeeEid).split('').forEach(function(ch){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0;});
+  const d=('00000000'+(h%100000000)).slice(-8),iso=/^\d{4}-\d{2}/.test(c.issueDate||'')?c.issueDate:TODAY();
+  return {num:'6080 '+d.slice(0,4)+' '+d.slice(4)+' '+l4,exp:iso.slice(5,7)+'/'+String((Number(iso.slice(2,4))+5)%100).padStart(2,'0')};}
+const CARD_WAVES='<svg class="vc-waves" viewBox="0 0 340 214" preserveAspectRatio="none" aria-hidden="true"><g fill="none" stroke-width="1.2">'
+  +'<path d="M-10 150 C 70 110, 150 210, 350 120" stroke="rgba(255,96,130,.45)"/><path d="M-10 165 C 80 125, 160 220, 350 135" stroke="rgba(255,96,130,.30)"/>'
+  +'<path d="M-10 180 C 90 140, 170 228, 350 150" stroke="rgba(255,255,255,.14)"/><path d="M120 -10 C 170 60, 260 40, 350 90" stroke="rgba(255,255,255,.08)"/></g></svg>';
+const CARD_NFC='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8.5 8.5a5 5 0 0 1 0 7"/><path d="M12 6a8.5 8.5 0 0 1 0 12"/><path d="M15.5 3.5a12 12 0 0 1 0 17"/></svg>';
+function cardVisual(c){const p=P.byEid(c.employeeEid)||{},x=cardSecret(c),bank=CARD_BANK[c.provider]||'';
+  const ended=c.status==='Blocked'||c.status==='Closed'||c.status==='Expired',flag=ended?c.status:c.hold?'On hold':c.status!=='Active'?c.status:'';
+  return '<div class="vc'+(ended?' is-ended':flag?' is-dim':'')+'" role="button" tabindex="0" data-act="cardShow" aria-label="Card ending '+E(c.last4)+'. Tap to see the number">'+CARD_WAVES
+   +'<div class="vc-top"><span class="vc-brand"><span class="vc-mark">O</span>OpenDhi</span>'+(bank?'<span class="vc-bank">'+E(bank.toUpperCase())+'</span>':'')+'</div>'
+   +'<div class="vc-prog">'+E(cardProg(c))+'</div>'
+   +'<div class="vc-mid"><span class="vc-chip"></span>'+CARD_NFC+(flag?'<span class="vc-flag">'+E(flag)+'</span>':'')+'</div>'
+   +'<div class="vc-num vc-secret">'+E(x.num)+'</div>'
+   +'<div class="vc-row"><div class="vc-who"><div class="vc-lbl">CARDHOLDER</div><div class="vc-name">'+E(String(p.name||'').toUpperCase())+'</div></div>'
+   +'<div><div class="vc-lbl">VALID THRU</div><div class="vc-exp vc-secret">'+E(x.exp)+'</div></div>'
+   +'<div class="vc-net"><span class="vc-rupay">RuPay<i></i></span><span class="vc-prepaid">PREPAID</span></div></div></div>';}
+M.acts.cardShow=function(el){const on=el.classList.toggle('is-shown'),h=document.querySelector('.vc-hint');if(h)h.textContent=on?'Tap to hide number':'Tap to show number';};
 function txnRow(t){const credit=t.direction==='Credit'||t.type==='Refund'||t.type==='Reversal';const dsp=(t.disputes||[]).length?DB().disputes.find(function(d){return d.ref===t.disputes[t.disputes.length-1];}):null;
   return '<div class="row tap" data-go="#/t/'+t.ref+'"><span class="ico">'+ic(WICON[t.wallet]||'wallet')+'</span><div class="row-m"><div class="row-t">'+E(t.merchant)+'</div><div class="row-s">'+E(walletName(t.wallet))+' · '+E(MFmt.dshort(t.date))+(t.type!=='Purchase'?' · '+E(t.type):'')+'</div></div><div class="row-r"><span class="b num'+(credit?' ok-t':'')+'">'+(credit?'+':'')+money(t.amount)+'</span>'+(dsp?badge('Dispute '+dsp.status.toLowerCase(),tone(dsp.status)):(t.status!=='Posted'?badge(t.status,'warn'):''))+'</div></div>';}
 route('/cards',function(){const cards=myCards(),p=me();
   if(!cards.length)return {title:'My cards',up:'#/more',tab:'more',html:emptyHTML('card','No card yet',p.status==='Onboarding'?'Your company card is issued once your onboarding is complete.':'Your company has not issued you a card yet.','<button class="btn sec" data-go="#/benefits">View my benefits</button>')};
   const c=cards[0],tx=cardTxns(c),av=cardAvail(c);
   const actions=[[c.hold?'Release hold':'Hold card','lock','cardHold'],['Lost or stolen','dispute','cardLost'],['Replace','refresh','cardReplace'],['Details','info','cardDetails']];
+  const cst=c.status==='Blocked'?'Blocked':c.hold?'On hold':c.status;
   let html=cardVisual(c)
+   +'<div class="vc-foot"><div class="row-m"><div class="row-t">'+E(cardProg(c))+'</div><div class="row-s">'+E(c.ref)+' · '+E(c.type||'Virtual')+' · <span class="vc-hint">Tap to show number</span></div></div>'+badge(cst,cst==='Active'?'ok':tone(cst))+'</div>'
    +'<div class="shorts" style="grid-template-columns:repeat(4,1fr);margin-top:12px">'+actions.map(function(a){return '<button class="short" style="font-size:12px;padding:12px 4px 10px" data-act="'+a[2]+'"'+(c.status==='Blocked'&&a[2]!=='cardDetails'?' disabled style="opacity:.4"':'')+'><span class="ico">'+ic(a[1],18)+'</span>'+a[0]+'</button>';}).join('')+'</div>';
   if(c.hold)html+='<div class="callout warn">Your card is on hold. Payments are declined until you release it.</div>';
   if(c.status==='Blocked')html+='<div class="callout bad">This card is blocked'+(c.replacement?'. A replacement is on its way.':'.')+'</div>';
-  html+='<div class="h2">Wallets</div><div class="card p0"><div class="row"><div class="row-m"><div class="lbl">Total available</div><div class="b num" style="font-size:24px;line-height:30px">'+money(av)+'</div></div></div>'
+  html+='<div class="h2">Wallet balances</div><div class="card p0"><div class="row"><div class="row-m"><div class="lbl">Total available</div><div class="b num" style="font-size:24px;line-height:30px">'+money(av)+'</div></div></div>'
    +c.wallets.map(function(w){const pct=w.loads?Math.round(w.balance/(w.loads+(w.credits||0))*100):0;return '<div class="row tap" data-act="txWallet" data-w="'+w.code+'"><span class="ico">'+ic(WICON[w.code]||'wallet')+'</span><div class="row-m"><div class="row-t">'+E(w.name)+'</div><div class="row-s">Loaded '+money(w.loads)+' · spent '+money(w.spent)+(w.credits?' · refunds '+money(w.credits):'')+'</div><div class="bar5" style="margin:6px 0 0"><i style="width:'+pct+'%"></i></div></div><div class="row-r"><span class="b num">'+money(w.balance)+'</span></div></div>';}).join('')+'</div>'
    +'<div class="card p0" style="margin-top:12px">'+rowHTML({icon:'gift',t:'My benefits',s:'Meal, Fuel, Telecom and Gift this month',go:'#/benefits'})+'</div>'+'<div class="h2" style="display:flex;justify-content:space-between;align-items:center">Recent payments <button class="link" data-act="txWallet" data-w="All">View all</button></div>'
    +(tx.length?'<div class="card p0">'+tx.slice(0,5).map(txnRow).join('')+'</div>':'<div class="card"><div class="meta">No payments yet.</div></div>')
