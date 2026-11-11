@@ -112,11 +112,6 @@ function fsize(n){return n>1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.
 /* Attachments (js/att.js): the file is saved on the phone; the form and the claim keep a link to it. */
 function attTile(link,act,label){return '<button class="att" '+act+'><span class="att-th">'+(link.src?'<img src="'+E(link.src)+'" alt="">':'<img data-att-id="'+E(link.id)+'" alt="">')+'</span><span class="att-m"><span class="att-n">'+E(link.name||label)+'</span><span class="cap">'+E(label)+' · Tap to view</span></span><span class="chev">'+ic('chev',16)+'</span></button>';}
 function lineAtt(r,l){return l.att||MAtt.seed(r.ref,l.id,l.proof);}
-/* Two buttons, because newer Android phones open only the gallery for a plain photo picker:
-   "Take photo" opens the camera straight away (capture), the other picks a photo or file already on the phone. */
-function pickBtns(camAttrs,fileAttrs,fileLabel,fileIcon,fileAccept,primary){
-  return '<div class="pick2"><label class="btn'+(primary?'':' sec')+' pick-b">'+ic('camera',18)+'Take photo<input type="file" accept="image/*" capture="environment" '+camAttrs+'></label>'
-    +'<label class="btn sec pick-b">'+ic(fileIcon,18)+E(fileLabel)+'<input type="file" accept="'+fileAccept+'" '+fileAttrs+'></label></div>';}
 /* Item receipts and the advance document: one Attach button that picks a photo or PDF already on the phone
    (photographing a receipt is done with Take photo in Scan receipt at the top). */
 function attachBtn(attrs){return '<div class="pick2"><label class="btn sec pick-b">'+ic('clip',18)+'Attach<input type="file" accept="image/*,application/pdf" '+attrs+'></label></div><div class="cap" style="margin-top:6px">Photo or PDF from your phone, up to 10 MB</div>';}
@@ -151,8 +146,11 @@ function rqRead(){const f=M.state.rq;if(!f)return;const g=function(id,d){const e
 route('/expenses/new',function(){if(!M.state.rq)M.state.rq=rqBlank();const f=M.state.rq,p=me(),reps=P.reports(p);
   const owner=f.forWho==='team'&&f.forEid?P.byEid(f.forEid):p;
   const A=f.auto||{};
-  let html='<div class="scan scan2"><div class="scan-h"><span class="ico">'+ic('camera',22)+'</span><span class="row-m"><span class="b" style="display:block">Scan receipt</span><span class="cap" style="display:block">Photograph the receipt — the details are filled in for you</span></span></div>'
-    +pickBtns('id="rq-scan"','id="rq-scan-g"','Gallery','image','image/*',true)+'</div>';
+  /* Scan receipt: one slim row with two round buttons. The camera button needs capture: without it newer
+     Android phones open only the gallery. The gallery button picks a photo already on the phone. */
+  let html='<div class="scan scan-row"><div class="row-m"><div class="b">Scan receipt</div><div class="cap">Details fill in for you</div></div>'
+    +'<label class="scan-ib dark" aria-label="Take photo" title="Take photo">'+ic('camera',20)+'<input type="file" id="rq-scan" accept="image/*" capture="environment"></label>'
+    +'<label class="scan-ib" aria-label="Choose from gallery" title="Gallery">'+ic('image',20)+'<input type="file" id="rq-scan-g" accept="image/*"></label></div>';
   if(f.scan)html+='<div class="callout ok" style="margin:0 0 12px"><b>Filled from the receipt:</b> '+E(f.scan.filled.join(', '))+'. Check the highlighted fields and fill the rest.'+(f.scan.fields.tax?'<div class="cap" style="margin-top:4px">GST on receipt '+money(f.scan.fields.tax)+(f.scan.fields.gstin?' · GSTIN '+E(f.scan.fields.gstin):'')+'</div>':'')+(f.scan.fields.currency&&f.scan.fields.currency!=='INR'?'<div class="cap warn-t" style="margin-top:4px">The receipt is in '+E(f.scan.fields.currency)+'. Enter the amount in INR.</div>':'')+'<div style="margin-top:6px"><button class="link" data-act="scanText">View scanned text</button></div></div>';
   html+='<div class="card"><div class="lbl" style="margin-bottom:6px">Category <span class="req">*</span></div><div class="seg"><button class="'+(f.type==='claim'?'on':'')+'" data-act="rqType" data-t="claim">Expense claim</button><button class="'+(f.type==='advance'?'on':'')+'" data-act="rqType" data-t="advance">Advance</button></div>'
    +field('Title',input('rq-title',f.title,{ph:f.type==='claim'?'e.g. Client visit — Whitefield':'e.g. Pune client visits',auto:A.title}),{req:true});
