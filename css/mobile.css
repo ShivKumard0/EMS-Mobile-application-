@@ -382,3 +382,10 @@ html.dsk .sheet{max-height:calc(var(--vh) * 88)}
 .kyc-load{position:fixed;inset:0;z-index:90;background:rgba(255,255,255,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;animation:fi .15s ease}
 .kyc-load .spin{margin-bottom:6px}
 .chk .ck{width:20px;height:20px;border-radius:4px;background:var(--black);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+/* KYC suggestions under a field */
+.fg.has-sug{position:relative}
+.sug{position:absolute;left:0;right:0;z-index:15;margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 24px rgba(15,23,42,.14);overflow:hidden}
+.sug-h{padding:8px 14px 4px;font-size:11px;line-height:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--gray)}
+.sug-i{display:block;width:100%;text-align:left;padding:12px 14px;font-size:15px;line-height:20px;border-top:1px solid var(--border)}
+.sug-i:first-of-type{border-top:0}
+.sug-i:active{background:var(--muted)}

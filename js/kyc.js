@@ -27,7 +27,7 @@ function kycAddr(a){a=a||{};const parts=String(a.line||'').split(',').map(functi
   return {addr1:l1,addr2:l2,addr3:'',city:a.city||'',state:a.state||'',pincode:a.pin||''};}
 function kycState(){const p=me(),k=kycRec(p),h=myHR();let s=M.state.ky;
   if(s&&s.eid===p.eid)return s;
-  const f=Object.assign({title:p.gender==='Female'?'Ms':p.gender==='Male'?'Mr':'',nameOnCard:String(p.name||'').toUpperCase(),pan:'',panLinked:'',occupation:p.jobTitle||'',annualIncome:'',sourceOfIncome:'Salaried',addrFrom:'cur',delivery:'Office branch',declConsent:false,declPep:false,declTrue:false},kycAddr(h.addr),k&&k.fields||{});
+  const f=Object.assign({title:'',nameOnCard:'',pan:'',panLinked:'',occupation:'',annualIncome:'',sourceOfIncome:'',addrFrom:'',addr1:'',addr2:'',addr3:'',city:'',state:'',pincode:'',delivery:'',declConsent:false,declPep:false,declTrue:false},k&&k.fields||{});
   s=M.state.ky={eid:p.eid,step:1,f:f,docs:Object.assign({},k&&k.docs||{}),busy:{}};return s;}
 function kyRead(){const s=M.state.ky;if(!s)return;const g=function(id){const el=document.getElementById(id);return el?(el.type==='checkbox'?el.checked:el.value):undefined;};
   [['title','ky-title'],['nameOnCard','ky-name'],['pan','ky-pan'],['panLinked','ky-link'],['occupation','ky-occ'],['annualIncome','ky-inc'],['sourceOfIncome','ky-src'],
@@ -60,7 +60,7 @@ route('/kyc',function(){const p=me(),k=kycRec(p);if(!kycNeeded(p)&&!k)return nul
      +field('Is your PAN linked with Aadhaar?',select('ky-link',['Yes','No'],f.panLinked,{ph:'Select'}),{req:true,help:f.panLinked==='No'?'Link your PAN with Aadhaar on the Income Tax e-filing portal first. The bank cannot issue the card without it.':'',err:f.panLinked==='No'})
      +field('Occupation',input('ky-occ',f.occupation,{ph:'e.g. Sales Executive'}),{req:true})
      +field('Annual income',select('ky-inc',KYC_SLABS,f.annualIncome,{ph:'Select'}),{req:true})
-     +field('Source of income',select('ky-src',['Salaried'],f.sourceOfIncome),{req:true})
+     +field('Source of income',select('ky-src',['Salaried'],f.sourceOfIncome,{ph:'Select'}),{req:true})
      +'</div><div class="h2">Documents upload</div><div class="card">'+KYC_DOCS.map(function(d){return kyUpload(d,s);}).join('')+'</div>';
   }else{
     const src=[['cur','Current'],['perm','Permanent'],['other','Other']];
@@ -72,13 +72,13 @@ route('/kyc',function(){const p=me(),k=kycRec(p);if(!kycNeeded(p)&&!k)return nul
      +field('State',select('ky-state',KYC_STATES,f.state,{ph:'Select'}),{req:true})
      +field('Pincode',input('ky-pin',f.pincode,{mode:'numeric',ph:'6 digits'}),{req:true})
      +'</div><div class="h2">Card delivery</div><div class="card">'
-     +field('Deliver my card to',select('ky-del',[['Office branch','Office · '+(p.branch||'work location')],['KYC address','My KYC address']],f.delivery),{req:true})
+     +field('Deliver my card to',select('ky-del',[['Office branch','Office · '+(p.branch||'work location')],['KYC address','My KYC address']],f.delivery,{ph:'Select'}),{req:true})
      +'</div><div class="h2">Declarations</div><div class="card" style="padding-top:4px;padding-bottom:4px">'
      +KYC_DECL.map(function(d){return '<label class="chk"><input type="checkbox" id="ky-'+d[0]+'"'+(f[d[0]]?' checked':'')+'><span>'+E(d[1])+'</span></label>';}).join('')+'</div>';
   }
   const foot=s.step===1?'<button class="btn" data-act="kyNext">Proceed to next step</button>':'<div class="btns"><button class="btn" data-act="kySubmit">Submit KYC</button><button class="btn sec" data-act="kyBack">Back</button></div>';
-  return {title:'Complete your KYC',up:'#/home',html:html,foot:foot,after:function(){
-    MAtt.thumbs();
+  return {title:'Complete your KYC',up:'#/home',html:html,foot:foot,end:KYC_RESET_BTN,after:function(){
+    MAtt.thumbs();kySuggest();
     const pan=document.getElementById('ky-pan');if(pan){pan.setAttribute('maxlength','10');pan.setAttribute('autocapitalize','characters');pan.addEventListener('input',function(){const c=pan.selectionStart;pan.value=pan.value.toUpperCase();try{pan.setSelectionRange(c,c);}catch(e){}});}
     const nm=document.getElementById('ky-name');if(nm){nm.setAttribute('maxlength','26');nm.setAttribute('autocapitalize','characters');}
     const pin=document.getElementById('ky-pin');if(pin)pin.setAttribute('maxlength','6');
@@ -140,4 +140,35 @@ function kycDone(p,k){const f=k.fields||{},d=k.docs||{};
    +'<div class="h2">Card delivery</div><div class="card">'+kyVBox('Deliver my card to',f.delivery==='KYC address'?'My KYC address':'Office · '+(p.branch||'work location'))+'</div>'
    +'<div class="h2">Declarations</div><div class="card" style="padding-top:4px;padding-bottom:4px">'+KYC_DECL.map(function(x){return '<div class="chk"><span class="ck">'+ic('check',14)+'</span><span>'+E(x[1])+'</span></div>';}).join('')+'</div>'
    +'<div class="cap" style="text-align:center;margin-top:14px">Submitted on '+E(k.submitted?k.submitted.date+' at '+k.submitted.time:'')+'</div>';
-  return {title:'Your KYC',up:'#/home',html:html,after:function(){MAtt.thumbs();}};}
+  return {title:'Your KYC',up:'#/home',html:html,end:KYC_RESET_BTN,after:function(){MAtt.thumbs();}};}
+
+/* Suggestions: tapping a typed field opens a short list of realistic values; tapping one fills the field.
+   (PAN suggestions match the PAN on the employee's profile.) */
+const KYC_SUG={
+  'ky-name':['KABIR JOSHI','KABIR S JOSHI','KABIR SANJAY JOSHI'],
+  'ky-pan':['BXKPJ4827Q','BXKPJ6153Q'],
+  'ky-occ':['Sales Executive','Salaried – private sector','Sales and marketing'],
+  'ky-a1':['14, 2nd Cross','Flat 302, Lakeview Residency','22, Shivaji Nagar'],
+  'ky-a2':['HSR Layout Sector 3','Varthur Road, Whitefield','Near Shivaji Nagar Bus Stand'],
+  'ky-a3':['Opposite BDA Complex','Near Agara Lake','Behind Fergusson College'],
+  'ky-city':['Bengaluru','Pune','Mumbai'],
+  'ky-pin':['560102','560066','411005']};
+function kySuggest(){Object.keys(KYC_SUG).forEach(function(id){const inp=document.getElementById(id);if(!inp)return;const box=inp.closest('.inp'),fg=inp.closest('.fg');if(!box||!fg)return;
+  let list=null,hideT=null;
+  const hide=function(){if(list){list.remove();list=null;}};
+  const show=function(){clearTimeout(hideT);const q=inp.value.trim().toLowerCase();
+    const opts=KYC_SUG[id].filter(function(o){const v=o.toLowerCase();return !q||(v.indexOf(q)>=0&&v!==q);});
+    if(!opts.length){hide();return;}
+    if(!list){list=document.createElement('div');list.className='sug';fg.classList.add('has-sug');box.insertAdjacentElement('afterend',list);}
+    list.innerHTML='<div class="sug-h">Suggestions</div>'+opts.map(function(o){return '<button type="button" class="sug-i">'+E(o)+'</button>';}).join('');
+    list.querySelectorAll('.sug-i').forEach(function(b){b.addEventListener('mousedown',function(e){e.preventDefault();});
+      b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();inp.value=b.textContent;inp.dispatchEvent(new Event('input'));markErr(id,false);hide();inp.blur();});});
+    setTimeout(function(){if(list&&list.scrollIntoView)list.scrollIntoView({block:'nearest'});},60);};
+  inp.addEventListener('focus',show);inp.addEventListener('input',show);
+  inp.addEventListener('blur',function(){hideT=setTimeout(hide,180);});});}
+
+/* Reset (refresh icon next to the bell, on the KYC page): clears the KYC so it can be filled in again. */
+const KYC_RESET_BTN='<button class="ib" data-act="kyReset" aria-label="Clear KYC and start again">'+ic('refresh',22)+'</button>';
+M.acts.kyReset=function(){const p=me();if(document.querySelector('.kyc-load'))return;
+  MStore.act('kyc.reset',p.eid,{},function(){if(MStore.db.kyc)delete MStore.db.kyc[p.eid];});
+  M.state.ky=null;render();window.scrollTo(0,0);toast('KYC cleared · fill it in again');};

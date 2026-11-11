@@ -86,7 +86,7 @@ window.addEventListener('hashchange',function(){const h=location.hash;const s=M.
 function bar(t,o){o=o||{};
   if(o.home)return '<header class="bar home-bar"><div class="bar-in"><div class="bar-title">'+E(t)+'</div>'+bellBtn()+'<button class="ib" data-go="#/profile" aria-label="My profile"><span class="av">'+E(MFmt.initials(me().name))+'</span></button></div></header>';
   if(o.root)return '<header class="bar"><div class="bar-in" style="padding-left:16px"><div class="bar-title">'+E(t)+'</div>'+(o.right||'')+bellBtn()+'</div></header>';
-  return '<header class="bar"><div class="bar-in"><button class="ib" data-back="'+E(o.up||'#/home')+'" aria-label="Back">'+ic('back',22)+'</button><div class="bar-title">'+E(t)+'</div>'+(o.right||'')+bellBtn()+'</div></header>';}
+  return '<header class="bar"><div class="bar-in"><button class="ib" data-back="'+E(o.up||'#/home')+'" aria-label="Back">'+ic('back',22)+'</button><div class="bar-title">'+E(t)+'</div>'+(o.right||'')+bellBtn()+(o.end||'')+'</div></header>';}
 function bellBtn(){const n=unreadCount();return '<button class="ib" data-go="#/notifications" aria-label="Notifications">'+ic('bell',22)+(n?'<span class="dot"></span>':'')+'</button>';}
 function nav(tab){const T=[['home','Home','home','#/home'],['attendance','Attendance','clock','#/attendance'],['leaves','Leaves','cal','#/leaves'],['more','More','dots','#/more']];
   return '<nav class="nav">'+T.map(function(t){return '<a href="'+t[3]+'" class="'+(tab===t[0]?'on':'')+'" data-tab="'+t[0]+'">'+ic(t[2],22)+'<span>'+t[1]+'</span></a>';}).join('')+'</nav>';}
@@ -98,7 +98,7 @@ function render(){
   for(const r of M.routes){const m=h.match(r.rx);if(m){const prm={};r.keys.forEach(function(k,i){prm[k]=decodeURIComponent(m[i+1]);});v=r.fn(prm);break;}}
   if(!v){go('#/home');return;}
   const same=M.lastHash===h;M.lastHash=h;const y=window.scrollY;
-  app.innerHTML=(v.home?bar(v.title,{home:true}):bar(v.title,{up:v.up,right:v.right,root:v.root}))
+  app.innerHTML=(v.home?bar(v.title,{home:true}):bar(v.title,{up:v.up,right:v.right,root:v.root,end:v.end}))
     +'<main class="page'+(v.foot?' no-nav':'')+'">'+v.html+'</main>'
     +(v.foot?'<div class="actbar">'+v.foot+'</div>':nav(v.tab||'more'));
   window.scrollTo(0,same?y:0);
