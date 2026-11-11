@@ -117,6 +117,9 @@ function lineAtt(r,l){return l.att||MAtt.seed(r.ref,l.id,l.proof);}
 function pickBtns(camAttrs,fileAttrs,fileLabel,fileIcon,fileAccept,primary){
   return '<div class="pick2"><label class="btn'+(primary?'':' sec')+' pick-b">'+ic('camera',18)+'Take photo<input type="file" accept="image/*" capture="environment" '+camAttrs+'></label>'
     +'<label class="btn sec pick-b">'+ic(fileIcon,18)+E(fileLabel)+'<input type="file" accept="'+fileAccept+'" '+fileAttrs+'></label></div>';}
+/* Item receipts and the advance document: one Attach button that picks a photo or PDF already on the phone
+   (photographing a receipt is done with Take photo in Scan receipt at the top). */
+function attachBtn(attrs){return '<div class="pick2"><label class="btn sec pick-b">'+ic('clip',18)+'Attach<input type="file" accept="image/*,application/pdf" '+attrs+'></label></div><div class="cap" style="margin-top:6px">Photo or PDF from your phone, up to 10 MB</div>';}
 function advAtt(r){return r.att||MAtt.seed(r.ref,'doc',r.proof);}
 /* Save a picked file for a form item (obj = a line, or the advance); the form redraws when it is ready. */
 function rqAttach(f,obj,file,from){obj.file=file.name&&!/^image\.\w+$/i.test(file.name)?file.name:'receipt-'+String(Date.now()).slice(-6)+'.jpg';obj.size='';obj.att=null;obj.busy=true;
@@ -169,7 +172,7 @@ route('/expenses/new',function(){if(!M.state.rq)M.state.rq=rqBlank();const f=M.s
       +'<div class="fg"><span class="lbl">Receipt'+(l.paidBy==='Employee'?' <span class="req">*</span>':'')+'</span>'+(l.file?'<div class="file" style="border:0">'
         +(l.busy?'<span class="ico"><span class="spin dark sm"></span></span>':l.att?'<button class="att-th sm" data-act="attForm" data-i="'+i+'" aria-label="View receipt"><img data-att-id="'+E(l.att.id)+'" alt=""></button>':'<span class="ico">'+ic(/\.pdf$/i.test(l.file)?'file':'camera')+'</span>')
         +'<div class="row-m"><div class="row-t" style="font-size:14px">'+E(l.file)+'</div><div class="cap">'+(l.busy?'Saving the receipt…':E(l.size||''))+'</div></div><button class="rm" data-act="lnFileDel" data-i="'+i+'">Remove</button></div>'
-        :pickBtns('data-ln="'+i+'" data-src="camera"','data-ln="'+i+'" data-src="file"','Upload file','upload','image/*,application/pdf')+'<div class="cap" style="margin-top:6px">Take a photo, or upload a JPG, PNG or PDF up to 10 MB</div>')+'</div></div>';}).join('')
+        :attachBtn('data-ln="'+i+'" data-src="file"'))+'</div></div>';}).join('')
       +'<button class="btn sec" style="margin-top:10px" data-act="lnAdd">'+ic('plus',18)+' Add another item</button>'
       +'<div class="total"><span>Total</span><span class="num" id="rq-total">'+money(f.lines.reduce(function(s,l){return s+(+l.amount||0);},0))+'</span></div><div id="rq-pol"></div>'
       +'<div class="card" style="margin-top:12px">'+field('Notes for your approver',textarea('rq-notes',f.notes,'Optional'))+'</div>';}
@@ -181,7 +184,7 @@ route('/expenses/new',function(){if(!M.state.rq)M.state.rq=rqBlank();const f=M.s
      +field('Purpose',textarea('av-pur',a.purpose,'What is the advance for?'),{req:true})
      +'<div class="fg"><span class="lbl">Itinerary or quote (optional)</span>'+(a.file?'<div class="file" style="border:0">'
        +(a.busy?'<span class="ico"><span class="spin dark sm"></span></span>':a.att?'<button class="att-th sm" data-act="attForm" data-i="doc" aria-label="View document"><img data-att-id="'+E(a.att.id)+'" alt=""></button>':'<span class="ico">'+ic('file')+'</span>')
-       +'<div class="row-m"><div class="row-t" style="font-size:14px">'+E(a.file)+'</div><div class="cap">'+(a.busy?'Saving the file…':E(a.size||''))+'</div></div><button class="rm" data-act="avFileDel">Remove</button></div>':pickBtns('id="av-cam"','id="av-file"','Upload file','upload','image/*,application/pdf')+'<div class="cap" style="margin-top:6px">Take a photo, or upload a JPG, PNG or PDF up to 10 MB</div>')+'</div>'
+       +'<div class="row-m"><div class="row-t" style="font-size:14px">'+E(a.file)+'</div><div class="cap">'+(a.busy?'Saving the file…':E(a.size||''))+'</div></div><button class="rm" data-act="avFileDel">Remove</button></div>':attachBtn('id="av-file"'))+'</div>'
      +'<div class="help" style="margin-top:12px">Your manager, then Finance, approve the advance. Settle it with your claims after the trip and return any unspent amount within 7 days.</div></div>';}
   return {title:f.editRef?'Edit '+f.editRef:'New request',up:'#/expenses',html:html,foot:'<div class="btns"><button class="btn" data-act="rqSubmit">Submit</button><button class="btn sec" data-act="rqDraft">Save draft</button></div>',
     after:function(){
@@ -193,7 +196,7 @@ route('/expenses/new',function(){if(!M.state.rq)M.state.rq=rqBlank();const f=M.s
       const mb=document.getElementById('rq-member');if(mb)mb.addEventListener('change',function(){rqRead();render();});
       document.querySelectorAll('[id^="ln-p-"]').forEach(function(el){el.addEventListener('change',function(){rqRead();render();});});
       document.querySelectorAll('input[data-ln]').forEach(function(inp){inp.addEventListener('change',function(){const fl=inp.files&&inp.files[0];if(!fl)return;rqRead();rqAttach(f,f.lines[+inp.getAttribute('data-ln')],fl,'photo');render();});});
-      ['av-file','av-cam'].forEach(function(k){const af=document.getElementById(k);if(af)af.addEventListener('change',function(){const fl=af.files&&af.files[0];if(!fl)return;rqRead();rqAttach(f,f.adv,fl,'photo');render();});});
+      ['av-file'].forEach(function(k){const af=document.getElementById(k);if(af)af.addEventListener('change',function(){const fl=af.files&&af.files[0];if(!fl)return;rqRead();rqAttach(f,f.adv,fl,'photo');render();});});
       const upd=function(){rqRead();const t=document.getElementById('rq-total');if(t)t.textContent=money(f.lines.reduce(function(s,l){return s+(+l.amount||0);},0));
         const pb=document.getElementById('rq-pol');if(!pb)return;const pol=policyFor(f,owner.eid);
         if(!pol||!pol.now){pb.innerHTML='';return;}
