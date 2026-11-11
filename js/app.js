@@ -106,9 +106,13 @@ function render(){
 }
 /* One handler for every tap: data-go navigates, data-back goes back, data-act runs an action. */
 document.addEventListener('click',function(e){
-  const g=e.target.closest('[data-go]');if(g){e.preventDefault();go(g.getAttribute('data-go'));return;}
-  const b=e.target.closest('[data-back]');if(b){e.preventDefault();back(b.getAttribute('data-back'));return;}
-  const a=e.target.closest('[data-act]');if(a){e.preventDefault();const f=M.acts[a.getAttribute('data-act')];if(f)f(a,e);return;}
+  const g=e.target.closest('[data-go]'),b=e.target.closest('[data-back]'),a=e.target.closest('[data-act]');
+  /* the innermost target wins: a button inside a tappable row (e.g. a receipt on a card item) does its own action */
+  const act=function(){e.preventDefault();const f=M.acts[a.getAttribute('data-act')];if(f)f(a,e);};
+  if(a&&(!g||g.contains(a))&&(!b||b.contains(a))){act();return;}
+  if(g){e.preventDefault();go(g.getAttribute('data-go'));return;}
+  if(b){e.preventDefault();back(b.getAttribute('data-back'));return;}
+  if(a){act();return;}
   if(e.target.classList&&e.target.classList.contains('scrim'))closeSheet();
 });
 

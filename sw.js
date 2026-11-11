@@ -1,5 +1,5 @@
 /* ADT Employee app: offline store (service worker).
-   - Receipt reader (files under ocr/, about 20 MB): saved on the phone the first time it is used,
+   - Receipt reader (ocr/, about 20 MB) and PDF reader (lib/pdfjs/): saved on the phone the first time they are used,
      then always read from the phone. If the reader files are ever replaced, change READER below so
      phones fetch the new ones and the old copy is removed.
    - App files (page, scripts, styles, icons): fetched fresh whenever the phone is online, so updates
@@ -16,7 +16,7 @@ self.addEventListener('activate', function (e) {
   }).then(function () { return self.clients.claim(); }));
 });
 
-function isReader(url) { return url.pathname.indexOf('/ocr/') !== -1; }
+function isReader(url) { return url.pathname.indexOf('/ocr/') !== -1 || url.pathname.indexOf('/lib/') !== -1; }
 
 async function fromReader(req) {
   const cache = await caches.open(READER);

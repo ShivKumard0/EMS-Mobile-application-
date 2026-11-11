@@ -107,8 +107,22 @@ M.acts.exStSet=function(el){M.state.ex.st=el.getAttribute('data-v');closeSheet()
 M.acts.exStReset=function(){M.state.ex.st='All';closeSheet();render();};
 
 /* ── New request: Category (Expense claim | Advance) → Sub Category → Expense Type, line items, receipts ── */
-function blankLine(){return {title:'',date:TODAY(),merchant:'',invoice:'',amount:'',paidBy:'Employee',file:'',size:'',auto:{}};}
+function blankLine(){return {title:'',date:TODAY(),merchant:'',invoice:'',amount:'',paidBy:'Employee',file:'',size:'',att:null,busy:false,auto:{}};}
 function fsize(n){return n>1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';}
+/* Attachments (js/att.js): the file is saved on the phone; the form and the claim keep a link to it. */
+function attTile(link,act,label){return '<button class="att" '+act+'><span class="att-th">'+(link.src?'<img src="'+E(link.src)+'" alt="">':'<img data-att-id="'+E(link.id)+'" alt="">')+'</span><span class="att-m"><span class="att-n">'+E(link.name||label)+'</span><span class="cap">'+E(label)+' · Tap to view</span></span><span class="chev">'+ic('chev',16)+'</span></button>';}
+function lineAtt(r,l){return l.att||MAtt.seed(r.ref,l.id,l.proof);}
+function advAtt(r){return r.att||MAtt.seed(r.ref,'doc',r.proof);}
+/* Save a picked file for a form item (obj = a line, or the advance); the form redraws when it is ready. */
+function rqAttach(f,obj,file,from){obj.file=file.name&&!/^image\.\w+$/i.test(file.name)?file.name:'receipt-'+String(Date.now()).slice(-6)+'.jpg';obj.size='';obj.att=null;obj.busy=true;
+  const again=function(){if(M.state.rq===f&&/^#\/expenses\/new/.test(location.hash)){rqRead();render();}};
+  return MAtt.save(file,from).then(function(link){obj.att=link;obj.file=link.name;obj.size=fsize(link.size)+(link.from==='pdf'?' · PDF saved as an image':'');obj.busy=false;again();})
+    .catch(function(e){obj.busy=false;obj.file='';obj.size='';obj.att=null;again();toast(e&&e.message?e.message:'Could not attach the file. Try again.');});}
+function rqBusy(f){return f.type==='claim'?f.lines.some(function(l){return l.busy;}):!!(f.adv&&f.adv.busy);}
+M.acts.attForm=function(el){const f=M.state.rq;if(!f)return;rqRead();const i=el.getAttribute('data-i'),o=i==='doc'?f.adv:f.lines[+i];if(o&&o.att)MAtt.view(o.att,i==='doc'?'Advance document':'Receipt · Item '+(+i+1));};
+M.acts.attView=function(el){const r=findRec(el.getAttribute('data-ref'));if(!r)return;const i=el.getAttribute('data-i');
+  if(i==='doc'){MAtt.view(advAtt(r),r.ref+' · Advance document');return;}
+  const l=r.lines[+i];if(l)MAtt.view(lineAtt(r,l),r.ref+' · Item '+(+i+1)+(l.title?' · '+l.title:''));};
 function rqBlank(){return {type:'claim',title:'',forWho:'self',forEid:'',subCat:'',expType:'',lines:[blankLine()],notes:'',just:'',adv:{sub:'Travel Advance',amount:'',requiredBy:addDays(TODAY(),3),from:addDays(TODAY(),4),to:addDays(TODAY(),6),cc:'',purpose:'',file:''},editRef:''};}
 M.acts.rqNew=function(){M.state.rq=rqBlank();go('#/expenses/new');};
 M.acts.rqNewAdv=function(){M.state.rq=rqBlank();M.state.rq.type='advance';go('#/expenses/new');};
@@ -146,7 +160,9 @@ route('/expenses/new',function(){if(!M.state.rq)M.state.rq=rqBlank();const f=M.s
       +'<div class="two">'+field('Date',input('ln-d-'+i,l.date,{type:'date',max:TODAY(),auto:(l.auto||{}).date}),{req:true})+field('Amount (INR ₹)',input('ln-a-'+i,l.amount,{type:'number',mode:'decimal',ph:'0',auto:(l.auto||{}).amount}),{req:true})+'</div>'
       +field('Merchant / Vendor',input('ln-m-'+i,l.merchant,{ph:'Where you paid',auto:(l.auto||{}).merchant}))+field('Invoice / Receipt No.',input('ln-i-'+i,l.invoice||'',{ph:'e.g. INV-20931',auto:(l.auto||{}).invoice}))
       +field('Paid by',select('ln-p-'+i,pays,l.paidBy),{req:true})
-      +'<div class="fg"><span class="lbl">Receipt'+(l.paidBy==='Employee'?' <span class="req">*</span>':'')+'</span>'+(l.file?'<div class="file" style="border:0">'+'<span class="ico">'+ic(/\.pdf$/i.test(l.file)?'file':'camera')+'</span><div class="row-m"><div class="row-t" style="font-size:14px">'+E(l.file)+'</div><div class="cap">'+E(l.size||'')+'</div></div><button class="rm" data-act="lnFileDel" data-i="'+i+'">Remove</button></div>'
+      +'<div class="fg"><span class="lbl">Receipt'+(l.paidBy==='Employee'?' <span class="req">*</span>':'')+'</span>'+(l.file?'<div class="file" style="border:0">'
+        +(l.busy?'<span class="ico"><span class="spin dark sm"></span></span>':l.att?'<button class="att-th sm" data-act="attForm" data-i="'+i+'" aria-label="View receipt"><img data-att-id="'+E(l.att.id)+'" alt=""></button>':'<span class="ico">'+ic(/\.pdf$/i.test(l.file)?'file':'camera')+'</span>')
+        +'<div class="row-m"><div class="row-t" style="font-size:14px">'+E(l.file)+'</div><div class="cap">'+(l.busy?'Saving the receipt…':E(l.size||''))+'</div></div><button class="rm" data-act="lnFileDel" data-i="'+i+'">Remove</button></div>'
         :'<label class="drop" style="margin-top:6px;position:relative">'+ic('camera',22)+'<span class="b" style="font-size:14px">Add receipt</span><span class="cap">Take a photo or pick a file · JPG, PNG or PDF up to 10 MB</span><input type="file" accept="image/*,application/pdf" data-ln="'+i+'" style="position:absolute;inset:0;opacity:0"></label>')+'</div></div>';}).join('')
       +'<button class="btn sec" style="margin-top:10px" data-act="lnAdd">'+ic('plus',18)+' Add another item</button>'
       +'<div class="total"><span>Total</span><span class="num" id="rq-total">'+money(f.lines.reduce(function(s,l){return s+(+l.amount||0);},0))+'</span></div><div id="rq-pol"></div>'
@@ -157,18 +173,21 @@ route('/expenses/new',function(){if(!M.state.rq)M.state.rq=rqBlank();const f=M.s
      +'<div class="two">'+field('Trip from',input('av-from',a.from,{type:'date',min:TODAY()}))+field('Trip to',input('av-to',a.to,{type:'date',min:TODAY()}))+'</div>'
      +field('Cost centre',select('av-cc',['Sales - West','Sales - South','Operations','Finance','Administration'],a.cc||(owner.dept==='Sales'?'Sales - South':owner.dept),{ph:'Select'}))
      +field('Purpose',textarea('av-pur',a.purpose,'What is the advance for?'),{req:true})
-     +'<div class="fg"><span class="lbl">Itinerary or quote (optional)</span>'+(a.file?'<div class="file" style="border:0"><span class="ico">'+ic('file')+'</span><div class="row-m"><div class="row-t" style="font-size:14px">'+E(a.file)+'</div></div><button class="rm" data-act="avFileDel">Remove</button></div>':'<label class="drop dash" style="margin-top:6px;position:relative">'+ic('upload',22)+'<span class="b" style="font-size:14px">Add a file</span><span class="cap">JPG, PNG or PDF up to 10 MB</span><input type="file" id="av-file" accept="image/*,application/pdf" style="position:absolute;inset:0;opacity:0"></label>')+'</div>'
+     +'<div class="fg"><span class="lbl">Itinerary or quote (optional)</span>'+(a.file?'<div class="file" style="border:0">'
+       +(a.busy?'<span class="ico"><span class="spin dark sm"></span></span>':a.att?'<button class="att-th sm" data-act="attForm" data-i="doc" aria-label="View document"><img data-att-id="'+E(a.att.id)+'" alt=""></button>':'<span class="ico">'+ic('file')+'</span>')
+       +'<div class="row-m"><div class="row-t" style="font-size:14px">'+E(a.file)+'</div><div class="cap">'+(a.busy?'Saving the file…':E(a.size||''))+'</div></div><button class="rm" data-act="avFileDel">Remove</button></div>':'<label class="drop dash" style="margin-top:6px;position:relative">'+ic('upload',22)+'<span class="b" style="font-size:14px">Add a file</span><span class="cap">JPG, PNG or PDF up to 10 MB</span><input type="file" id="av-file" accept="image/*,application/pdf" style="position:absolute;inset:0;opacity:0"></label>')+'</div>'
      +'<div class="help" style="margin-top:12px">Your manager, then Finance, approve the advance. Settle it with your claims after the trip and return any unspent amount within 7 days.</div></div>';}
   return {title:f.editRef?'Edit '+f.editRef:'New request',up:'#/expenses',html:html,foot:'<div class="btns"><button class="btn" data-act="rqSubmit">Submit</button><button class="btn sec" data-act="rqDraft">Save draft</button></div>',
     after:function(){
+      MAtt.thumbs();
       const sc=document.getElementById('rq-scan');if(sc)sc.addEventListener('change',function(){const fl=sc.files&&sc.files[0];if(!fl)return;rqRead();rqScan(fl);sc.value='';});
       if(f.type==='claim'&&typeof MOcr!=='undefined')setTimeout(function(){MOcr.load().catch(function(){});},1500);
       const sub=document.getElementById('rq-sub');if(sub)sub.addEventListener('change',function(){rqRead();f.expType='';f.auto&&(f.auto.subCat=f.auto.expType=false);render();});
       const fr=document.getElementById('rq-for');if(fr)fr.addEventListener('change',function(){rqRead();if(f.forWho==='self')f.forEid='';render();});
       const mb=document.getElementById('rq-member');if(mb)mb.addEventListener('change',function(){rqRead();render();});
       document.querySelectorAll('[id^="ln-p-"]').forEach(function(el){el.addEventListener('change',function(){rqRead();render();});});
-      document.querySelectorAll('input[data-ln]').forEach(function(inp){inp.addEventListener('change',function(){const fl=inp.files&&inp.files[0];if(!fl)return;rqRead();const l=f.lines[+inp.getAttribute('data-ln')];l.file=fl.name;l.size=fsize(fl.size);render();});});
-      const af=document.getElementById('av-file');if(af)af.addEventListener('change',function(){if(af.files[0]){rqRead();f.adv.file=af.files[0].name;render();}});
+      document.querySelectorAll('input[data-ln]').forEach(function(inp){inp.addEventListener('change',function(){const fl=inp.files&&inp.files[0];if(!fl)return;rqRead();rqAttach(f,f.lines[+inp.getAttribute('data-ln')],fl,'photo');render();});});
+      const af=document.getElementById('av-file');if(af)af.addEventListener('change',function(){const fl=af.files&&af.files[0];if(!fl)return;rqRead();rqAttach(f,f.adv,fl,'photo');render();});
       const upd=function(){rqRead();const t=document.getElementById('rq-total');if(t)t.textContent=money(f.lines.reduce(function(s,l){return s+(+l.amount||0);},0));
         const pb=document.getElementById('rq-pol');if(!pb)return;const pol=policyFor(f,owner.eid);
         if(!pol||!pol.now){pb.innerHTML='';return;}
@@ -179,8 +198,8 @@ route('/expenses/new',function(){if(!M.state.rq)M.state.rq=rqBlank();const f=M.s
 M.acts.rqType=function(el){rqRead();M.state.rq.type=el.getAttribute('data-t');render();};
 M.acts.lnAdd=function(){rqRead();const f=M.state.rq;const l=blankLine();l.paidBy=f.lines[f.lines.length-1].paidBy;f.lines.push(l);render();};
 M.acts.lnDel=function(el){rqRead();M.state.rq.lines.splice(+el.getAttribute('data-i'),1);render();};
-M.acts.lnFileDel=function(el){rqRead();const l=M.state.rq.lines[+el.getAttribute('data-i')];l.file='';l.size='';render();};
-M.acts.avFileDel=function(){rqRead();M.state.rq.adv.file='';render();};
+M.acts.lnFileDel=function(el){rqRead();const l=M.state.rq.lines[+el.getAttribute('data-i')];l.file='';l.size='';l.att=null;l.busy=false;render();};
+M.acts.avFileDel=function(){rqRead();const a=M.state.rq.adv;a.file='';a.size='';a.att=null;a.busy=false;render();};
 function rqValidate(f,draft){const errs=[];const mark=function(id,bad){markErr(id,bad);if(bad)errs.push(id);};
   mark('rq-title',!f.title);if(draft)return errs;
   if(f.forWho==='team')mark('rq-member',!f.forEid);
@@ -189,14 +208,14 @@ function rqValidate(f,draft){const errs=[];const mark=function(id,bad){markErr(i
     const owner=f.forWho==='team'&&f.forEid?f.forEid:me().eid,pol=policyFor(f,owner);if(pol&&pol.over>0&&!(f.just||'').trim())mark('rq-just',true);}
   else{const a=f.adv;mark('av-amt',!(+a.amount>0));mark('av-req',!a.requiredBy);mark('av-pur',(a.purpose||'').trim().length<10);if(a.from&&a.to&&a.to<a.from)mark('av-to',true);}
   return errs;}
-function rqSave(draft){rqRead();const f=M.state.rq,errs=rqValidate(f,draft);
+function rqSave(draft){rqRead();if(rqBusy(M.state.rq)){toast('Wait a moment: the receipt is still being saved');return;}const f=M.state.rq,errs=rqValidate(f,draft);
   if(errs.length){const r=errs.find(function(e){return /^receipt/.test(e);});toast(r&&errs.length===1?'Add a receipt for item '+r.split(' ')[1]:'Fill in the highlighted fields');const el=document.querySelector('.inp.err');if(el)el.scrollIntoView({block:'center',behavior:'smooth'});return;}
   const p=me(),owner=f.forWho==='team'&&f.forEid?P.byEid(f.forEid):p,isAdv=f.type==='advance',coll=isAdv?DB().advances:DB().expenses;
   let rec=f.editRef?coll.find(function(r){return r.ref===f.editRef;}):null;
   const fresh=!rec;if(fresh){const k=MStore.next(isAdv?'ADV':'EXP');rec={id:(isAdv?50000:30000)+k,key:k,ref:(isAdv?'ADV-':'EXP-')+k,kind:isAdv?'advance':'expense',currency:'INR',logs:[],origin:'mobile',cid:MStore.cid(),createdBy:myUid()};}
   Object.assign(rec,{title:f.title,employeeEid:owner.eid,name:owner.name,empId:owner.empId,email:owner.email,appliedOn:TODAY(),notes:f.notes||''});
-  if(isAdv){const a=f.adv;Object.assign(rec,{category:a.sub,purpose:a.purpose,requiredBy:a.requiredBy,periodFrom:a.from,periodTo:a.to,costCenter:a.cc,proof:a.file,ledger:[],lines:[{id:1,title:'Advance',amount:+a.amount||0,subCat:a.sub,start:a.from,end:a.to,proof:a.file,status:'Pending'}]});}
-  else Object.assign(rec,{category:f.subCat,appType:'Reimbursement',policyJust:f.just||'',lines:f.lines.map(function(l,i){return {id:i+1,title:l.title,amount:+l.amount||0,subCat:f.expType,start:l.date,end:l.date,proof:l.file,paidBy:l.paidBy,merchant:l.merchant,invoice:l.invoice||'',ocr:l.ocr||null,txnId:l.txnId||null,cardId:l.cardId||null,advanceId:l.paidBy==='Company Advance'?(myOpenAdvances(owner.eid)[0]||{}).id:'',status:'Pending'};})});
+  if(isAdv){const a=f.adv;Object.assign(rec,{category:a.sub,purpose:a.purpose,requiredBy:a.requiredBy,periodFrom:a.from,periodTo:a.to,costCenter:a.cc,proof:a.file,att:a.att||null,ledger:[],lines:[{id:1,title:'Advance',amount:+a.amount||0,subCat:a.sub,start:a.from,end:a.to,proof:a.file,att:a.att||null,status:'Pending'}]});}
+  else Object.assign(rec,{category:f.subCat,appType:'Reimbursement',policyJust:f.just||'',lines:f.lines.map(function(l,i){return {id:i+1,title:l.title,amount:+l.amount||0,subCat:f.expType,start:l.date,end:l.date,proof:l.file,att:l.att||null,paidBy:l.paidBy,merchant:l.merchant,invoice:l.invoice||'',ocr:l.ocr||null,txnId:l.txnId||null,cardId:l.cardId||null,advanceId:l.paidBy==='Company Advance'?(myOpenAdvances(owner.eid)[0]||{}).id:'',status:'Pending'};})});
   const total=reqTotal(rec),onBehalf=owner.eid!==p.eid?' on behalf of '+owner.name:'';
   MStore.act(draft?'request.saveDraft':'request.submit',rec.ref,{kind:rec.kind,total:total},function(){
     if(fresh)coll.unshift(rec);
@@ -211,8 +230,8 @@ M.acts.rqDraft=function(){rqSave(true);};
 M.acts.rqCopy=function(el){const r=findRec(el.getAttribute('data-ref'));if(!r)return;const f=rqBlank();
   f.type=r.kind==='advance'?'advance':'claim';f.title=r.title;f.editRef=r.status==='Draft'?r.ref:'';
   if(r.employeeEid!==me().eid){f.forWho='team';f.forEid=r.employeeEid;}
-  if(f.type==='claim'){f.subCat=r.category;f.expType=(r.lines[0]||{}).subCat||'';f.just=r.policyJust||'';f.notes=r.notes||'';f.lines=r.lines.map(function(l){return {title:l.title||'',date:l.start||TODAY(),merchant:l.merchant||'',invoice:l.invoice||'',amount:String(l.amount||''),paidBy:l.paidBy||'Employee',file:l.proof||'',size:'',txnId:l.txnId,cardId:l.cardId,ocr:l.ocr||null,auto:{}};});}
-  else f.adv={sub:r.category,amount:String(reqTotal(r)),requiredBy:r.requiredBy,from:r.periodFrom,to:r.periodTo,cc:r.costCenter||'',purpose:r.purpose||'',file:r.proof||''};
+  if(f.type==='claim'){f.subCat=r.category;f.expType=(r.lines[0]||{}).subCat||'';f.just=r.policyJust||'';f.notes=r.notes||'';f.lines=r.lines.map(function(l){return {title:l.title||'',date:l.start||TODAY(),merchant:l.merchant||'',invoice:l.invoice||'',amount:String(l.amount||''),paidBy:l.paidBy||'Employee',file:l.proof||'',size:'',att:lineAtt(r,l)||null,busy:false,txnId:l.txnId,cardId:l.cardId,ocr:l.ocr||null,auto:{}};});}
+  else f.adv={sub:r.category,amount:String(reqTotal(r)),requiredBy:r.requiredBy,from:r.periodFrom,to:r.periodTo,cc:r.costCenter||'',purpose:r.purpose||'',file:r.proof||'',size:'',att:advAtt(r)||null,busy:false};
   M.state.rq=f;go('#/expenses/new');};
 
 /* ── Request detail (claims, advances, card loads) ── */
@@ -230,8 +249,9 @@ route('/r/:ref',function(pr){const r=findRec(pr.ref);if(!r)return null;const p=m
   if(r.status==='Draft')html+='<div class="callout info">Not submitted yet. Check the items and submit when ready.</div>';
   if(r.policyJust)html+='<div class="callout warn"><b>Above the policy limit.</b> Reason: '+E(r.policyJust)+'</div>';
   if(r.kind==='expense'){html+='<div class="h2">Items · '+r.lines.length+'</div><div class="card p0">'+r.lines.map(function(l,i){const tx=l.txnId?DB().txns.find(function(t){return t.id===l.txnId;}):null;
-      return '<div class="row" style="align-items:flex-start"'+(tx?' data-go="#/t/'+tx.ref+'"':'')+'><span class="ico">'+ic(l.paidBy==='Corporate Card'?'card':l.paidBy==='Company Advance'?'adv':'receipt')+'</span><div class="row-m"><div class="row-t" style="white-space:normal">'+E(l.title||l.merchant||('Item '+(i+1)))+'</div><div class="row-s" style="white-space:normal">'+E(l.subCat||'')+(l.start?' · '+E(MFmt.dshort(l.start)):'')+(l.merchant&&l.merchant!==(l.title||l.merchant)?' · '+E(l.merchant):'')+'</div><div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><span class="tag">'+E(PAID[l.paidBy]||l.paidBy||'')+(tx?' · '+E(tx.ref):'')+'</span>'+(l.invoice?'<span class="tag">Inv '+E(l.invoice)+'</span>':'')+(l.ocr?'<span class="tag">Scanned</span>':'')+(l.proof?'<span class="tag">'+ic('file',11).replace('<svg','<svg style="display:inline;vertical-align:-1px"')+' '+E(l.proof)+'</span>':'')+'</div></div><div class="row-r"><span class="b num">'+money(l.amount)+'</span></div></div>';}).join('')+'</div>';}
-  if(r.kind==='advance'){html+='<div class="h2">Details</div><div class="card">'+kv('Sub Category',E(r.category))+kv('Needed by',E(MFmt.date(r.requiredBy)))+(r.periodFrom?kv('Trip',E(MFmt.dshort(r.periodFrom))+' – '+E(MFmt.date(r.periodTo))):'')+(r.costCenter?kv('Cost centre',E(r.costCenter)):'')+(r.project?kv('Project',E(r.project)):'')+(r.proof?kv('Attachment',E(r.proof)):'')+'<div class="kv-col"><span class="k">Purpose</span>'+E(r.purpose||'')+'</div></div>';
+      return '<div class="row" style="align-items:flex-start"'+(tx?' data-go="#/t/'+tx.ref+'"':'')+'><span class="ico">'+ic(l.paidBy==='Corporate Card'?'card':l.paidBy==='Company Advance'?'adv':'receipt')+'</span><div class="row-m"><div class="row-t" style="white-space:normal">'+E(l.title||l.merchant||('Item '+(i+1)))+'</div><div class="row-s" style="white-space:normal">'+E(l.subCat||'')+(l.start?' · '+E(MFmt.dshort(l.start)):'')+(l.merchant&&l.merchant!==(l.title||l.merchant)?' · '+E(l.merchant):'')+'</div><div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><span class="tag">'+E(PAID[l.paidBy]||l.paidBy||'')+(tx?' · '+E(tx.ref):'')+'</span>'+(l.invoice?'<span class="tag">Inv '+E(l.invoice)+'</span>':'')+(l.ocr?'<span class="tag">Scanned</span>':'')+(l.proof&&!lineAtt(r,l)?'<span class="tag">'+ic('file',11).replace('<svg','<svg style="display:inline;vertical-align:-1px"')+' '+E(l.proof)+'</span>':'')+'</div>'
+        +(lineAtt(r,l)?attTile(lineAtt(r,l),'data-act="attView" data-ref="'+E(r.ref)+'" data-i="'+i+'"','Receipt'):'')+'</div><div class="row-r"><span class="b num">'+money(l.amount)+'</span></div></div>';}).join('')+'</div>';}
+  if(r.kind==='advance'){html+='<div class="h2">Details</div><div class="card">'+kv('Sub Category',E(r.category))+kv('Needed by',E(MFmt.date(r.requiredBy)))+(r.periodFrom?kv('Trip',E(MFmt.dshort(r.periodFrom))+' – '+E(MFmt.date(r.periodTo))):'')+(r.costCenter?kv('Cost centre',E(r.costCenter)):'')+(r.project?kv('Project',E(r.project)):'')+(advAtt(r)?'<div class="kv-col"><span class="k">Attachment</span>'+attTile(advAtt(r),'data-act="attView" data-ref="'+E(r.ref)+'" data-i="doc"','Itinerary or quote')+'</div>':r.proof?kv('Attachment',E(r.proof)):'')+'<div class="kv-col"><span class="k">Purpose</span>'+E(r.purpose||'')+'</div></div>';
     if(r.status==='Approved'){const iss=advIssued(r),used=advUsed(r),ret=advReturned(r),bal=iss-used-ret;
       html+='<div class="h2">Money</div><div class="card">'+(iss?kv('Paid to you',money(iss)+' <span class="cap">'+E(((r.ledger||[]).find(function(x){return x.type==='Issuance';})||{}).ref||'')+'</span>')+kv('Settled with claims',money(used))+(ret?kv('Returned',money(ret)):'')+kv('Balance',(bal>0?'<span class="warn-t b">'+money(bal)+'</span>':money(0))):kv('Payment','<span class="warn-t">Ready for Finance to pay</span>'))
         +(iss&&bal>0&&used>0?'<div class="help">Return the unspent '+money(bal)+' by '+E(MFmt.date(advReturnBy(r)))+'.</div>':'')+(iss&&bal>0&&!used?'<div class="help">Settle it with your claims after the trip.</div>':'')+'</div>';}}
@@ -247,7 +267,7 @@ route('/r/:ref',function(pr){const r=findRec(pr.ref);if(!r)return null;const p=m
   else if(mine&&r.status==='Follow-Up')foot='<div class="btns"><button class="btn" data-act="rqRespond" data-ref="'+r.ref+'">Respond and resubmit</button><button class="btn sec" data-act="rqCopy" data-ref="'+r.ref+'">Edit</button></div>';
   else if(mine&&r.status==='Rejected')foot='<button class="btn" data-act="rqCopy" data-ref="'+r.ref+'">Edit and resubmit</button>';
   else if(mine&&r.kind==='advance'&&r.status==='Approved'&&advIssued(r)&&advBalance(r)>0&&advUsed(r)>0)foot='<button class="btn" data-act="advReturn" data-ref="'+r.ref+'">Return '+money(advBalance(r))+'</button>';
-  return {title:r.ref,up:appr?'#/approvals':'#/expenses',tab:'more',html:html,foot:foot};});
+  return {title:r.ref,up:appr?'#/approvals':'#/expenses',tab:'more',html:html,foot:foot,after:function(){MAtt.thumbs();}};});
 M.acts.logAll=function(el){const r=el.getAttribute('data-ref');M.state.logAll=M.state.logAll===r?null:r;render();};
 M.acts.dec=function(el){const r=findRec(el.getAttribute('data-ref')),d=el.getAttribute('data-d');if(!r||!canDecide(r,myUid())){toast('This request is no longer waiting for you');render();return;}
   const T={Approve:['Approve '+r.ref+'?','Comment (optional)','Approve'],Reject:['Reject '+r.ref+'?','Reason for rejecting','Reject'],'Follow-Up':['Send '+r.ref+' back?','What do you need from them?','Send back']}[d];
@@ -358,8 +378,14 @@ route('/benefits',function(){const p=me(),c=myCards()[0],mon=MFmt.MONTH[todayD()
 /* ── Receipt scan: Expenses -> New request -> Scan receipt (PaddleOCR in the browser, js/ocr.js) ── */
 function rqScan(file){const f=M.state.rq;
   sheet('Scan receipt','<div style="text-align:center;padding:14px 0 6px"><div class="spin dark" style="margin:0 auto 14px"></div><div class="b" id="sc-step">Preparing the receipt reader\u2026</div><div class="cap" style="margin-top:6px">The first scan downloads the receipt reader once (about 20 MB). After that a receipt takes a few seconds.</div></div>');
+  /* the photo is saved as the item's receipt while it is being read */
+  const saving=MAtt.save(file,'scan');saving.catch(function(){});
   MOcr.read(file,TODAY(),function(t){const el=document.getElementById('sc-step');if(el)el.textContent=t;}).then(function(res){
-      closeSheet();rqApplyScan(f,res,file);render();
+      closeSheet();const l=rqApplyScan(f,res,file);l.busy=true;l.att=null;
+      const again=function(){if(M.state.rq===f&&/^#\/expenses\/new/.test(location.hash)){rqRead();render();}};
+      saving.then(function(link){l.att=link;l.file=link.name;l.size=fsize(link.size);l.busy=false;again();})
+        .catch(function(e){l.busy=false;l.file='';l.size='';again();toast(e&&e.message?e.message:'Could not attach the photo. Add it again.');});
+      render();
       const n=f.scan.filled.filter(function(x){return x!=='Receipt';}).length;
       toast(n?'Filled '+n+' field'+(n>1?'s':'')+' from the receipt. Check them and fill the rest.':'No details could be read from this photo. The photo is attached; fill the fields by hand.');})
     .catch(function(e){closeSheet();toast(e&&e.message?e.message:'Could not read the receipt. Try again.');if(window.console)console.warn(e);});}
@@ -372,6 +398,6 @@ function rqApplyScan(f,res,file){const x=res.fields,filled=[];f.type='claim';f.a
   put(l,l.auto,'merchant',x.merchant,'Merchant');put(l,l.auto,'invoice',x.invoice,'Invoice No.');
   l.file=file.name&&!/^image\.\w+$/i.test(file.name)?file.name:'receipt-'+String(Date.now()).slice(-6)+'.jpg';l.size=fsize(file.size||0);filled.push('Receipt');
   l.ocr={engine:'PaddleOCR PP-OCRv4',fields:x,rows:(res.rows||[]).slice(0,80)};
-  f.scan={filled:filled,rows:res.rows||[],fields:x};}
+  f.scan={filled:filled,rows:res.rows||[],fields:x};return l;}
 M.acts.scanText=function(){const f=M.state.rq;if(!f||!f.scan)return;rqRead();
   sheet('Scanned text','<div class="cap" style="margin-bottom:8px">What the reader found on the receipt, top to bottom.</div><div style="font:13px/19px ui-monospace,Menlo,Consolas,monospace;background:var(--muted);border-radius:10px;padding:12px;white-space:pre-wrap;word-break:break-word;max-height:calc(var(--vh,1vh) * 55);overflow:auto">'+E((f.scan.rows||[]).join('\n')||'No text found.')+'</div>');};
