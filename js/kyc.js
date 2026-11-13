@@ -1,8 +1,9 @@
 /* ── Card KYC (an employee who is still onboarding: Kabir) ──────────────────────────────────────────
    The employee's own card KYC, as in the web app's Card Enrollment: what the bank needs to issue the card.
    No business fields (GST, CIN, FSSAI, TAN, MSME, shop licence, cancelled cheque): the card is the employee's own
-   prepaid card. Step 1: KYC details + Aadhaar and PAN card. Step 2: KYC address, card delivery, declarations.
-   Submit → Pending HR review. Kept in MStore.db.kyc[eid]; every step goes to the outbox for the web app
+   prepaid card. Step 1: KYC details (PAN, Aadhaar number; occupation, income and source filled in from the
+   employee record, still editable) + Aadhaar and PAN card. Step 2: KYC address, declarations.
+   Submit → details verified (no HR approval step). Kept in MStore.db.kyc[eid]; every step goes to the outbox for the web app
    (kyc.save, kyc.document, kyc.submit). Home shows the banner while the person is onboarding. */
 const KYC_SLABS=['Up to ₹2.5 lakh','₹2.5 lakh to ₹5 lakh','₹5 lakh to ₹10 lakh','More than ₹10 lakh'];
 const KYC_STATES=['Andaman and Nicobar Islands','Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chandigarh','Chhattisgarh','Dadra and Nagar Haveli and Daman and Diu','Delhi','Goa','Gujarat','Haryana','Himachal Pradesh','Jammu and Kashmir','Jharkhand','Karnataka','Kerala','Ladakh','Lakshadweep','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Puducherry','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal'];
@@ -10,16 +11,22 @@ const KYC_DECL=[['declConsent','I agree to share my details with RBL Bank to iss
 const KYC_DOCS=[['aadhaar','Aadhaar card','Front and back, or your e-Aadhaar PDF'],['pan','PAN card','Photo or PDF of your PAN card']];
 /* What counts towards the percentage: details already on the employee record + what the employee fills in here. */
 const KYC_REUSED=['name','email','contact','dob','gender','nationality','empId'];
-const KYC_OWN=['title','nameOnCard','pan','panLinked','occupation','annualIncome','sourceOfIncome','addr1','addr2','city','state','pincode','delivery','declConsent','declPep','declTrue'];
+const KYC_OWN=['nameOnCard','pan','aadhaar','panLinked','occupation','annualIncome','sourceOfIncome','addr1','addr2','city','state','pincode','declConsent','declPep','declTrue'];
+/* Filled in from the employee record; the employee can change them. The phone has no salary for the person,
+   so the income slab uses h.income when the record has one, else the slab below. */
+const KYC_INCOME_DEFAULT='₹5 lakh to ₹10 lakh';
+function kycAuto(p){const h=P.hr(p)||{};return {occupation:(p&&p.jobTitle)||'',annualIncome:h.income||KYC_INCOME_DEFAULT,sourceOfIncome:'Salaried'};}
+function kycFill(f,p){const a=kycAuto(p);Object.keys(a).forEach(function(x){if(!f[x])f[x]=a[x];});return f;}
 
 function kycRec(p){return p&&MStore.db.kyc?MStore.db.kyc[p.eid]||null:null;}
 function kycNeeded(p){return !!p&&p.status==='Onboarding';}
-function kycPct(p){const k=kycRec(p)||{},f=k.fields||{},d=k.docs||{};
+function kycPct(p){const k=kycRec(p)||{},f=kycFill(Object.assign({},k.fields||{}),p),d=k.docs||{};
   const have=KYC_REUSED.filter(function(x){return p[x];}).length+(p.name?1:0)+KYC_OWN.filter(function(x){return f[x];}).length+KYC_DOCS.filter(function(x){return d[x[0]];}).length;
   return Math.min(100,Math.round(have/(KYC_REUSED.length+1+KYC_OWN.length+KYC_DOCS.length)*100));}
 const KYC_WARN='<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.9 18.2A2 2 0 0 0 3.6 21h16.8a2 2 0 0 0 1.7-2.8L13.7 3.9a2 2 0 0 0-3.4 0z" fill="#FBBF24"/><path d="M12 9v4.5M12 17h.01" stroke="#1F2937" stroke-width="2" stroke-linecap="round"/></svg>';
-function kycBanner(p){if(!kycNeeded(p))return '';const k=kycRec(p),sub=k&&k.status==='Submitted';
-  return '<button class="kyc-bn" data-go="#/kyc"><span class="kyc-w'+(sub?' wait':'')+'">'+(sub?ic('clock',20):KYC_WARN)+'</span><span class="kyc-t">'+(sub?'KYC Under Review':'Complete Your KYC ('+kycPct(p)+'%)')+'</span><span class="kyc-go">'+ic('arrowR',18)+'</span></button>';}
+/* The banner shows only until the KYC is submitted and verified; there is no review step after that. */
+function kycBanner(p){if(!kycNeeded(p))return '';const k=kycRec(p);if(k&&k.status==='Submitted')return '';
+  return '<button class="kyc-bn" data-go="#/kyc"><span class="kyc-w">'+KYC_WARN+'</span><span class="kyc-t">Complete Your KYC ('+kycPct(p)+'%)</span><span class="kyc-go">'+ic('arrowR',18)+'</span></button>';}
 
 /* Address on the employee record → KYC address lines. */
 function kycAddr(a){a=a||{};const parts=String(a.line||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
@@ -27,16 +34,23 @@ function kycAddr(a){a=a||{};const parts=String(a.line||'').split(',').map(functi
   return {addr1:l1,addr2:l2,addr3:'',city:a.city||'',state:a.state||'',pincode:a.pin||''};}
 function kycState(){const p=me(),k=kycRec(p),h=myHR();let s=M.state.ky;
   if(s&&s.eid===p.eid)return s;
-  const f=Object.assign({title:'',nameOnCard:'',pan:'',panLinked:'',occupation:'',annualIncome:'',sourceOfIncome:'',addrFrom:'',addr1:'',addr2:'',addr3:'',city:'',state:'',pincode:'',delivery:'',declConsent:false,declPep:false,declTrue:false},k&&k.fields||{});
+  const f=kycFill(Object.assign({nameOnCard:'',pan:'',aadhaar:'',panLinked:'',occupation:'',annualIncome:'',sourceOfIncome:'',addrFrom:'',addr1:'',addr2:'',addr3:'',city:'',state:'',pincode:'',declConsent:false,declPep:false,declTrue:false},k&&k.fields||{}),p);
   s=M.state.ky={eid:p.eid,step:1,f:f,docs:Object.assign({},k&&k.docs||{}),busy:{}};return s;}
 function kyRead(){const s=M.state.ky;if(!s)return;const g=function(id){const el=document.getElementById(id);return el?(el.type==='checkbox'?el.checked:el.value):undefined;};
-  [['title','ky-title'],['nameOnCard','ky-name'],['pan','ky-pan'],['panLinked','ky-link'],['occupation','ky-occ'],['annualIncome','ky-inc'],['sourceOfIncome','ky-src'],
-   ['addr1','ky-a1'],['addr2','ky-a2'],['addr3','ky-a3'],['city','ky-city'],['state','ky-state'],['pincode','ky-pin'],['delivery','ky-del']].forEach(function(x){const v=g(x[1]);if(v!==undefined)s.f[x[0]]=typeof v==='string'?v.trim():v;});
+  [['nameOnCard','ky-name'],['pan','ky-pan'],['aadhaar','ky-aad'],['panLinked','ky-link'],['occupation','ky-occ'],['annualIncome','ky-inc'],['sourceOfIncome','ky-src'],
+   ['addr1','ky-a1'],['addr2','ky-a2'],['addr3','ky-a3'],['city','ky-city'],['state','ky-state'],['pincode','ky-pin']].forEach(function(x){const v=g(x[1]);if(v!==undefined)s.f[x[0]]=typeof v==='string'?v.trim():v;});
   KYC_DECL.forEach(function(d){const v=g('ky-'+d[0]);if(v!==undefined)s.f[d[0]]=v;});
-  if(s.f.pan)s.f.pan=s.f.pan.toUpperCase().replace(/\s/g,'');if(s.f.nameOnCard)s.f.nameOnCard=s.f.nameOnCard.toUpperCase().replace(/\s+/g,' ');}
+  if(s.f.pan)s.f.pan=s.f.pan.toUpperCase().replace(/\s/g,'');if(s.f.nameOnCard)s.f.nameOnCard=s.f.nameOnCard.toUpperCase().replace(/\s+/g,' ');
+  if(s.f.aadhaar)s.f.aadhaar=String(s.f.aadhaar).replace(/\D/g,'');}
 function kySave(type){const s=M.state.ky,p=me();const f=Object.assign({},s.f);
   MStore.act(type||'kyc.save',p.eid,{fields:f},function(){const db=MStore.db;db.kyc=db.kyc||{};const k=db.kyc[p.eid]||(db.kyc[p.eid]={eid:p.eid,status:'Draft',docs:{}});k.fields=f;k.docs=Object.assign({},s.docs);k.updated=new Date().toISOString();return k;});}
 function kyMaskPan(v){v=String(v||'');return v.length===10?v.slice(0,5)+'••••'+v.slice(8):v;}
+/* Aadhaar number: 12 digits, first digit 2–9, last digit a Verhoeff check digit (UIDAI's rule). Shown as 1234 5678 9012, masked XXXX XXXX 9012 after submit. */
+const KY_VD=['0123456789','1234067895','2340178956','3401289567','4012395678','5987604321','6598710432','7659821043','8765932104','9876543210'];
+const KY_VP=['0123456789','1576283094','5803796214','8916043527','9453126870','4286573901','2793806415','7046913258'];
+function kyAadOk(n){n=String(n||'');if(!/^[2-9][0-9]{11}$/.test(n))return false;let c=0;n.split('').reverse().forEach(function(x,i){c=+KY_VD[c][+KY_VP[i%8][+x]];});return c===0;}
+function kyAadFmt(v){return String(v||'').replace(/\D/g,'').slice(0,12).replace(/(\d{4})(?=\d)/g,'$1 ');}
+function kyMaskAad(v){v=String(v||'');return v.length===12?'XXXX XXXX '+v.slice(8):v;}
 
 /* Upload box (Aadhaar card, PAN card): Upload → saved as an image on the phone (PDFs turned into one image). */
 function kyUpload(d,s){const k=d[0],link=s.docs[k],busy=s.busy[k];
@@ -48,19 +62,19 @@ M.acts.kyView=function(el){const s=M.state.ky,k=el.getAttribute('data-k'),d=KYC_
 
 route('/kyc',function(){const p=me(),k=kycRec(p);if(!kycNeeded(p)&&!k)return null;
   if(k&&k.status==='Submitted')return kycDone(p,k);
-  const s=kycState(),f=s.f,h=myHR();
+  const s=kycState(),f=s.f,h=myHR(),au=kycAuto(p),FROM='From your employee record';
   const steps='<div class="ky-steps"><i class="on"></i><i'+(s.step===2?' class="on"':'')+'></i></div><div class="cap" style="margin-top:6px">Step '+s.step+' of 2 · '+(s.step===1?'KYC details':'Address and declarations')+'</div>';
   let html=steps;
   if(s.step===1){
     html+='<div class="card" style="margin-top:12px"><div class="lbl" style="margin-bottom:4px">From your profile</div>'+kv('Name',E(p.name))+kv('Employee ID',E(p.empId))+kv('Mobile',E(p.contact||'—'))+kv('Date of birth',E(MFmt.date(p.dob)))+'</div>'
      +'<div class="h2">KYC details</div><div class="card">'
-     +field('Title',select('ky-title',['Mr','Ms','Mrs'],f.title,{ph:'Select'}),{req:true})
      +field('Name on card',input('ky-name',f.nameOnCard,{ph:'As on your PAN'}),{req:true,help:'As on your PAN · letters and spaces, up to 26'})
      +field('PAN number',input('ky-pan',f.pan,{ph:'ABCDE1234F'}),{req:true,help:'10 characters, as on your PAN card'})
+     +field('Aadhaar number',input('ky-aad',kyAadFmt(f.aadhaar),{mode:'numeric',ph:'XXXX XXXX XXXX'}),{req:true,help:'12 digits, as on your Aadhaar card'})
      +field('Is your PAN linked with Aadhaar?',select('ky-link',['Yes','No'],f.panLinked,{ph:'Select'}),{req:true,help:f.panLinked==='No'?'Link your PAN with Aadhaar on the Income Tax e-filing portal first. The bank cannot issue the card without it.':'',err:f.panLinked==='No'})
-     +field('Occupation',input('ky-occ',f.occupation,{ph:'e.g. Sales Executive'}),{req:true})
-     +field('Annual income',select('ky-inc',KYC_SLABS,f.annualIncome,{ph:'Select'}),{req:true})
-     +field('Source of income',select('ky-src',['Salaried'],f.sourceOfIncome,{ph:'Select'}),{req:true})
+     +field('Occupation',input('ky-occ',f.occupation,{ph:'e.g. Sales Executive',auto:!!au.occupation&&f.occupation===au.occupation}),{req:true,help:f.occupation===au.occupation?FROM:''})
+     +field('Annual income',select('ky-inc',KYC_SLABS,f.annualIncome,{ph:'Select',auto:f.annualIncome===au.annualIncome}),{req:true,help:f.annualIncome===au.annualIncome?FROM:''})
+     +field('Source of income',select('ky-src',['Salaried'],f.sourceOfIncome,{ph:'Select',auto:f.sourceOfIncome===au.sourceOfIncome}),{req:true,help:f.sourceOfIncome===au.sourceOfIncome?FROM:''})
      +'</div><div class="h2">Documents upload</div><div class="card">'+KYC_DOCS.map(function(d){return kyUpload(d,s);}).join('')+'</div>';
   }else{
     const src=[['cur','Current'],['perm','Permanent'],['other','Other']];
@@ -71,8 +85,6 @@ route('/kyc',function(){const p=me(),k=kycRec(p);if(!kycNeeded(p)&&!k)return nul
      +field('City',input('ky-city',f.city),{req:true})
      +field('State',select('ky-state',KYC_STATES,f.state,{ph:'Select'}),{req:true})
      +field('Pincode',input('ky-pin',f.pincode,{mode:'numeric',ph:'6 digits'}),{req:true})
-     +'</div><div class="h2">Card delivery</div><div class="card">'
-     +field('Deliver my card to',select('ky-del',[['Office branch','Office · '+(p.branch||'work location')],['KYC address','My KYC address']],f.delivery,{ph:'Select'}),{req:true})
      +'</div><div class="h2">Declarations</div><div class="card" style="padding-top:4px;padding-bottom:4px">'
      +KYC_DECL.map(function(d){return '<label class="chk"><input type="checkbox" id="ky-'+d[0]+'"'+(f[d[0]]?' checked':'')+'><span>'+E(d[1])+'</span></label>';}).join('')+'</div>';
   }
@@ -81,6 +93,7 @@ route('/kyc',function(){const p=me(),k=kycRec(p);if(!kycNeeded(p)&&!k)return nul
     MAtt.thumbs();kySuggest();
     const pan=document.getElementById('ky-pan');if(pan){pan.setAttribute('maxlength','10');pan.setAttribute('autocapitalize','characters');pan.addEventListener('input',function(){const c=pan.selectionStart;pan.value=pan.value.toUpperCase();try{pan.setSelectionRange(c,c);}catch(e){}});}
     const nm=document.getElementById('ky-name');if(nm){nm.setAttribute('maxlength','26');nm.setAttribute('autocapitalize','characters');}
+    const ad=document.getElementById('ky-aad');if(ad){ad.setAttribute('maxlength','14');ad.addEventListener('input',function(){const v=kyAadFmt(ad.value);if(v!==ad.value)ad.value=v;});}
     const pin=document.getElementById('ky-pin');if(pin)pin.setAttribute('maxlength','6');
     const ln=document.getElementById('ky-link');if(ln)ln.addEventListener('change',function(){kyRead();render();});
     KYC_DOCS.forEach(function(d){const inp=document.getElementById('ky-up-'+d[0]);if(inp)inp.addEventListener('change',function(){const fl=inp.files&&inp.files[0];if(!fl)return;kyRead();kyAttach(d[0],fl);});});}};});
@@ -95,13 +108,14 @@ M.acts.kyAddr=function(el){kyRead();const s=M.state.ky,a=el.getAttribute('data-a
 
 /* Checks: each wrong field is outlined; the toast says what to fix first. */
 function kyCheck1(){const s=M.state.ky,f=s.f,h=myHR(),bad=[];const err=function(id,msg){markErr(id,true);bad.push(msg);};
-  ['ky-title','ky-name','ky-pan','ky-link','ky-occ','ky-inc','ky-src'].forEach(function(id){markErr(id,false);});
-  if(!f.title)err('ky-title','Pick your title');
+  ['ky-name','ky-pan','ky-aad','ky-link','ky-occ','ky-inc','ky-src'].forEach(function(id){markErr(id,false);});
   if(!/^[A-Z ]{2,26}$/.test(f.nameOnCard||''))err('ky-name','Name on card: letters and spaces only, up to 26');
   const pm=/^([A-Z]{5})•+([0-9A-Z]{2})$/.exec(String((h.stat||{}).pan||''));
   if(!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(f.pan||''))err('ky-pan','Enter a valid PAN, like ABCDE1234F');
   else if(f.pan[3]!=='P')err('ky-pan','This is not a personal PAN (the 4th letter of a personal PAN is P)');
   else if(pm&&(f.pan.slice(0,5)!==pm[1]||f.pan.slice(-2)!==pm[2]))err('ky-pan','This PAN does not match the PAN in your profile ('+(h.stat||{}).pan+')');
+  if(!/^[0-9]{12}$/.test(f.aadhaar||''))err('ky-aad','Enter your 12-digit Aadhaar number');
+  else if(!kyAadOk(f.aadhaar))err('ky-aad','This is not a valid Aadhaar number. Check the 12 digits on your Aadhaar card');
   if(!f.panLinked)err('ky-link','Tell us if your PAN is linked with Aadhaar');else if(f.panLinked==='No')err('ky-link','Link your PAN with Aadhaar first');
   if(String(f.occupation||'').length<2)err('ky-occ','Enter your occupation');
   if(!f.annualIncome)err('ky-inc','Pick your annual income');
@@ -109,13 +123,12 @@ function kyCheck1(){const s=M.state.ky,f=s.f,h=myHR(),bad=[];const err=function(
   KYC_DOCS.forEach(function(d){const b=document.getElementById('ky-box-'+d[0]);if(s.busy[d[0]])bad.push(d[1]+' is still saving');else if(!s.docs[d[0]]){if(b)b.classList.add('err');bad.push('Upload your '+d[1]);}});
   return bad;}
 function kyCheck2(){const f=M.state.ky.f,bad=[];const err=function(id,msg){markErr(id,true);bad.push(msg);};
-  ['ky-a1','ky-a2','ky-city','ky-state','ky-pin','ky-del'].forEach(function(id){markErr(id,false);});
+  ['ky-a1','ky-a2','ky-city','ky-state','ky-pin'].forEach(function(id){markErr(id,false);});
   if(String(f.addr1||'').length<3)err('ky-a1','Enter address line 1');
   if(String(f.addr2||'').length<3)err('ky-a2','Enter address line 2');
   if(String(f.city||'').length<2)err('ky-city','Enter your city');
   if(!f.state)err('ky-state','Pick your state');
   if(!/^[1-9][0-9]{5}$/.test(f.pincode||''))err('ky-pin','Enter a 6-digit pincode');
-  if(!f.delivery)err('ky-del','Pick where to deliver your card');
   if(KYC_DECL.some(function(d){return !f[d[0]];}))bad.push('Tick all three declarations');
   return bad;}
 M.acts.kyNext=function(){kyRead();const bad=kyCheck1();if(bad.length){toast(bad[0]);return;}kySave('kyc.save');M.state.ky.step=2;render();window.scrollTo(0,0);};
@@ -125,19 +138,18 @@ M.acts.kySubmit=function(){kyRead();const bad=kyCheck2();if(bad.length){toast(ba
   MStore.act('kyc.submit',p.eid,{fields:M.state.ky.f,docs:Object.keys(M.state.ky.docs)},function(){const k=MStore.db.kyc[p.eid];k.status='Submitted';k.submitted=at;k.verified=at;k.origin='mobile';k.cid=k.cid||MStore.cid();});
   /* Verifying: 3 seconds, then every detail shows Verified. */
   const w=document.createElement('div');w.className='kyc-load';w.setAttribute('role','status');
-  w.innerHTML='<span class="spin dark"></span><div class="b" style="font-size:17px">Verifying your details</div><div class="meta">PAN, Aadhaar and address</div>';
+  w.innerHTML='<span class="spin dark"></span><div class="b" style="font-size:17px">Verifying your details</div><div class="meta">PAN, Aadhaar and documents</div>';
   document.body.appendChild(w);
   setTimeout(function(){w.remove();M.state.ky=null;if(location.hash==='#/kyc')render();window.scrollTo(0,0);toast('KYC submitted · details verified');},3000);};
 
-/* After submitting: the same boxes, filled in and locked, each marked Verified. */
-function kyVBox(label,value){return '<div class="fg"><span class="lbl">'+E(label)+'</span><div class="inp lock vbox">'+E(value||'—')+'</div><div class="vf">'+ic('check',14)+'Verified</div></div>';}
+/* After submitting: the same boxes, filled in and locked. Only what the bank checks (PAN, Aadhaar number, the two documents) is marked Verified. */
+function kyVBox(label,value,ok){return '<div class="fg"><span class="lbl">'+E(label)+'</span><div class="inp lock vbox">'+E(value||'—')+'</div>'+(ok?'<div class="vf">'+ic('check',14)+'Verified</div>':'')+'</div>';}
 function kyVDoc(x,link){return '<div class="fg"><span class="lbl">'+E(x[1])+'</span><div class="upl done"><button class="att-th sm" data-act="kyView" data-k="'+x[0]+'" aria-label="View '+E(x[1])+'"><img data-att-id="'+E(link.id)+'" alt=""></button><span class="upl-m"><span class="upl-n">'+E(link.name)+'</span><span class="upl-ok">'+ic('check',14)+'Uploaded</span></span><button class="upl-c" data-act="kyView" data-k="'+x[0]+'">View</button></div><div class="vf">'+ic('check',14)+'Verified</div></div>';}
 function kycDone(p,k){const f=k.fields||{},d=k.docs||{};
-  const html='<div class="card" style="text-align:center;padding:22px 16px"><span class="ico round" style="margin:0 auto 10px;width:48px;height:48px;background:var(--ok-bg,#ECFDF3);color:var(--ok)">'+ic('check',24)+'</span><div class="b" style="font-size:17px">Details verified</div><div class="meta" style="margin-top:4px">HR approves your KYC next. Your company card is issued once it is approved.</div><div style="margin-top:10px">'+badge('Pending HR approval','warn')+'</div></div>'
-   +'<div class="h2">KYC details</div><div class="card">'+kyVBox('Title',f.title)+kyVBox('Name on card',f.nameOnCard)+kyVBox('PAN number',kyMaskPan(f.pan))+kyVBox('PAN linked with Aadhaar',f.panLinked)+kyVBox('Occupation',f.occupation)+kyVBox('Annual income',f.annualIncome)+kyVBox('Source of income',f.sourceOfIncome)+'</div>'
+  const html='<div class="card" style="text-align:center;padding:22px 16px"><span class="ico round" style="margin:0 auto 10px;width:48px;height:48px;background:var(--ok-bg,#ECFDF3);color:var(--ok)">'+ic('check',24)+'</span><div class="b" style="font-size:17px">Details verified</div></div>'
+   +'<div class="h2">KYC details</div><div class="card">'+kyVBox('Name on card',f.nameOnCard)+kyVBox('PAN number',kyMaskPan(f.pan),true)+(f.aadhaar?kyVBox('Aadhaar number',kyMaskAad(f.aadhaar),true):'')+kyVBox('PAN linked with Aadhaar',f.panLinked)+kyVBox('Occupation',f.occupation)+kyVBox('Annual income',f.annualIncome)+kyVBox('Source of income',f.sourceOfIncome)+'</div>'
    +'<div class="h2">Documents upload</div><div class="card">'+KYC_DOCS.map(function(x){return d[x[0]]?kyVDoc(x,d[x[0]]):'';}).join('')+'</div>'
    +'<div class="h2">KYC address</div><div class="card">'+kyVBox('Address line 1',f.addr1)+kyVBox('Address line 2',f.addr2)+(f.addr3?kyVBox('Address line 3',f.addr3):'')+kyVBox('City',f.city)+kyVBox('State',f.state)+kyVBox('Pincode',f.pincode)+'</div>'
-   +'<div class="h2">Card delivery</div><div class="card">'+kyVBox('Deliver my card to',f.delivery==='KYC address'?'My KYC address':'Office · '+(p.branch||'work location'))+'</div>'
    +'<div class="h2">Declarations</div><div class="card" style="padding-top:4px;padding-bottom:4px">'+KYC_DECL.map(function(x){return '<div class="chk"><span class="ck">'+ic('check',14)+'</span><span>'+E(x[1])+'</span></div>';}).join('')+'</div>'
    +'<div class="cap" style="text-align:center;margin-top:14px">Submitted on '+E(k.submitted?k.submitted.date+' at '+k.submitted.time:'')+'</div>';
   return {title:'Your KYC',up:'#/home',html:html,end:KYC_RESET_BTN,after:function(){MAtt.thumbs();}};}
@@ -147,6 +159,7 @@ function kycDone(p,k){const f=k.fields||{},d=k.docs||{};
 const KYC_SUG={
   'ky-name':['KABIR JOSHI','KABIR S JOSHI','KABIR SANJAY JOSHI'],
   'ky-pan':['BXKPJ4827Q','BXKPJ6153Q'],
+  'ky-aad':['4829 1736 5022','7354 6218 9042'],
   'ky-occ':['Sales Executive','Salaried – private sector','Sales and marketing'],
   'ky-a1':['14, 2nd Cross','Flat 302, Lakeview Residency','22, Shivaji Nagar'],
   'ky-a2':['HSR Layout Sector 3','Varthur Road, Whitefield','Near Shivaji Nagar Bus Stand'],
