@@ -44,6 +44,8 @@ const MStore=(function(){
     get db(){return db;},
     on:function(f){subs.push(f);},
     act:act,
+    /* keep the copy (the sync, js/sync.js, after it brings the web app's records) */
+    save:save,
     cid:cid,
     now:nowParts,
     next:function(prefix){const n=db.seq[prefix]++;return n;},

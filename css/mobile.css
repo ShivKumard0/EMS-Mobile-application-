@@ -389,3 +389,13 @@ html.dsk .sheet{max-height:calc(var(--vh) * 88)}
 .sug-i{display:block;width:100%;text-align:left;padding:12px 14px;font-size:15px;line-height:20px;border-top:1px solid var(--border)}
 .sug-i:first-of-type{border-top:0}
 .sug-i:active{background:var(--muted)}
+/* Submit summary: each item, its Sub Category and amount, and the wallet balance beside it (14 Nov 2026) */
+.cs-row{align-items:flex-start}
+.cs-row .row-t,.cs-row .row-s{white-space:normal}
+.cs-r .cs-w{font-size:12px;line-height:16px;color:var(--ok);white-space:nowrap}
+.cs-r .cs-w.mut{color:var(--gray)}
+/* Approve / Reject: the items this decision is for (a request from the web app) */
+.dec-items{margin-bottom:12px}
+.dec-items .chk{padding:12px 16px;align-items:center}
+.dec-l .row-m>span{display:block}
+.dec-l .row-t{white-space:normal}

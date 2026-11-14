@@ -98,21 +98,25 @@ const MOcr=(function(){
   /* GSTIN: 15 characters; OCR often glues it to the label ("GSTIN27AAFCS5678K1Z2"), so no word boundary in front. */
   function findGstin(rows){const m=rows.join(' ').match(/\d{2}[A-Za-z]{5}\d{4}[A-Za-z][1-9A-Za-z][Zz][0-9A-Za-z](?![0-9A-Za-z])/);return m?m[0].replace(/l/g,'I').toUpperCase():'';}
   function findCurrency(rows){const t=rows.join(' ');if(/₹|\brs\.?\b|\binr\b|rupees/i.test(t))return 'INR';if(/\busd\b|\$/i.test(t))return 'USD';if(/€|\beur\b/i.test(t))return 'EUR';if(/£|\bgbp\b/i.test(t))return 'GBP';if(/\baed\b|dirham/i.test(t))return 'AED';return 'INR';}
-  /* Sub Category and Expense Type from words on the receipt (the person can change them). */
+  /* Sub Category and Expense Type from words on the receipt, in the web app's lists (14 Nov 2026); the person can change
+     them. An empty Expense Type is left for the person to pick. */
   const GUESS=[
-    [/hotel|\binn\b|resort|lodge|residency|suites|stay|room\s*(no|charges|rent)|check-?in/i,'Accommodation','Hotel Stay','Hotel stay'],
-    [/indigo|air\s*india|vistara|akasa|spicejet|airlines?|boarding|flight|pnr/i,'Travel Reimbursement','One Way','Flight'],
-    [/irctc|railway|train|metro|bus\s*ticket|redbus/i,'Travel Reimbursement','One Way','Train / bus ticket'],
-    [/uber|\bola\b|rapido|blusmart|cab|taxi(?!nvoice)|auto\s*rickshaw|\bride\b|trip\s*fare|meru|cityride/i,'Travel Reimbursement','Local Conveyance','Cab'],
-    [/parking|toll|fastag/i,'Travel Reimbursement','Local Conveyance','Parking / toll'],
-    [/petrol|diesel|fuel|indianoil|indian\s*oil|bharat\s*petroleum|\bbpcl\b|\bhpcl\b|hp\s*petrol|shell|nayara/i,'Travel Reimbursement','Local Conveyance','Fuel'],
-    [/restaurant|cafe|café|coffee|\btea\b|chai|kitchen|dhaba|food|swiggy|zomato|biryani|pizza|burger|bakery|lunch|dinner|breakfast|meal|bar\s*&|veg|thali/i,'Meal Allowance','Working Meal','Meal'],
-    [/broadband|internet|fibernet|fibre|fiber|wi-?fi|mbps/i,'Telecom','Internet','Internet bill'],
-    [/airtel|\bjio\b|vodafone|\bvi\b|bsnl|postpaid|prepaid|recharge|mobile\s*bill/i,'Telecom','Mobile Bill','Phone bill'],
-    [/stationery|xerox|print|copier|office\s*supplies|courier|amazon|flipkart|stationers/i,'Office Supplies','Stationery','Office supplies']];
+    [/hotel|\binn\b|resort|lodge|residency|suites|stay|room\s*(no|charges|rent)|check-?in/i,'Accommodation','Accommodation','Hotel stay'],
+    [/indigo|air\s*india|vistara|akasa|spicejet|airlines?|boarding|flight|pnr/i,'Travel Reimbursement','Intercity Travel - Air','Flight'],
+    [/irctc|railway|\btrain\b/i,'Travel Reimbursement','Intercity Travel - Train','Train ticket'],
+    [/bus\s*ticket|redbus/i,'Travel Reimbursement','Intercity Travel - Bus','Bus ticket'],
+    [/\bmetro\b/i,'Travel Reimbursement','One Way','Metro ticket'],
+    [/uber|\bola\b|rapido|blusmart|cab|taxi(?!nvoice)|auto\s*rickshaw|\bride\b|trip\s*fare|meru|cityride/i,'Travel Reimbursement','One Way','Cab'],
+    [/parking|toll|fastag/i,'Travel Reimbursement','One Way','Parking / toll'],
+    [/petrol|diesel|fuel|indianoil|indian\s*oil|bharat\s*petroleum|\bbpcl\b|\bhpcl\b|hp\s*petrol|shell|nayara/i,'Fuel Reimbursement','','Fuel'],
+    [/restaurant|cafe|café|coffee|\btea\b|chai|kitchen|dhaba|food|swiggy|zomato|biryani|pizza|burger|bakery|lunch|dinner|breakfast|meal|bar\s*&|veg|thali/i,'Meal Allowance','','Meal'],
+    [/broadband|internet|fibernet|fibre|fiber|wi-?fi|mbps/i,'Telephone & Internet','Broadband','Internet bill'],
+    [/airtel|\bjio\b|vodafone|\bvi\b|bsnl|postpaid|prepaid|recharge|mobile\s*bill/i,'Telephone & Internet','Mobile','Phone bill'],
+    [/stationery|xerox|print|copier|office\s*supplies|courier|amazon|flipkart|stationers/i,'Office Stationery','','Office supplies']];
   /* The category with the most keyword hits wins (ties: the earlier one), so one stray word cannot decide it. */
   function guess(rows){const t=rows.join(' ');let best=null,bn=0;
     for(let i=0;i<GUESS.length;i++){const n=(t.match(new RegExp(GUESS[i][0].source,'gi'))||[]).length;if(n>bn){bn=n;best=GUESS[i];}}
+    if(best&&best[1]==='Meal Allowance'){const m=/breakfast|lunch|dinner/i.exec(t);if(m)return {subCat:best[1],expType:m[0].charAt(0).toUpperCase()+m[0].slice(1).toLowerCase(),what:best[3]};}
     return best?{subCat:best[1],expType:best[2],what:best[3]}:{subCat:'',expType:'',what:''};}
   function parse(rows,today){
     const amount=findTotal(rows),g=guess(rows),merchant=findMerchant(rows);

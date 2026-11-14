@@ -80,5 +80,5 @@ const MAtt=(function(){
       .catch(function(){body.innerHTML='<div class="viewer-miss">This file could not be opened.</div>';});
     return w;}
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-  return {save:save,url:url,thumbs:thumbs,seed:seed,view:view};
+  return {save:save,url:url,thumbs:thumbs,seed:seed,view:view,blob:get};
 })();
