@@ -288,7 +288,7 @@ svg{display:block}
 /* ── Profile picker ── */
 .pick{min-height:100vh;min-height:100dvh;padding:calc(var(--safe-t) + 40px) 20px calc(var(--safe-b) + 24px)}
 .brand{display:flex;align-items:center;gap:10px;margin-bottom:28px}
-.brand img{height:28px}
+.brand img{height:48px;width:auto}
 .pick h1{font-size:28px;line-height:34px;font-weight:700;margin:0 0 6px}
 .who{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface);margin-top:10px;text-align:left}
 .who:active{background:#FAFAFB}
