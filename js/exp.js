@@ -56,8 +56,8 @@ function walletCell(eid,cat){
   else{const cs=DB().cards.filter(function(c){return c.employeeEid===eid&&c.status!=='Blocked'&&c.status!=='Closed';});
     cs.forEach(function(c){(c.wallets||[]).forEach(function(x){if(codes.indexOf(x.code)<0)codes.push(x.code);});});
     const x=cs.map(function(c){return (c.wallets||[]).find(function(q){return q.code===code;});}).find(Boolean);bal=x?x.balance||0:0;}
-  if(codes.indexOf(code)<0)return {text:walletName(code)+' · Not on your card',muted:true};
-  return {text:walletName(code)+' · '+money(bal)};}
+  if(codes.indexOf(code)<0)return {text:walletName(code)+' wallet · not on your card',muted:true};
+  return {text:walletName(code)+' wallet · '+money(bal)+' available'};}
 
 /* ── Approval routes (web: AWF-18 / AWF-19; card loads: Card approver review) ── */
 function uidOfEid(eid){return P.userOf(P.byEid(eid));}
@@ -268,6 +268,15 @@ M.acts.avFileDel=function(){rqRead();const a=M.state.rq.adv;a.file='';a.size='';
 function advNeedsJust(f,owner){return myOpenAdvances((owner||me()).eid).length>0||/justification/i.test(f.sendError||'');}
 /* The web app's policy check asked for a justification when this request was last sent. */
 function webAsksJust(f){return MSync.on&&f.type==='claim'&&/justification/i.test(f.sendError||'');}
+/* What is missing, in words: the first field to fill (and its item), so it is clear why nothing was submitted. */
+const ERR_NAMES={'ln-c':'pick the Category','ln-x':'pick the Sub Category','ln-t':'enter the Expense Title','ln-d':'enter a Start Date (today or earlier)','ln-e':'the End Date is before the Start Date',
+  'ln-a':'enter the Amount Spent','ln-s':'the GST Amount cannot be more than the Amount Spent','rq-member':'Pick the team member','rq-just':'Give the policy justification',
+  'av-title':'Enter the Title','av-amt':'Enter the Requested Amount','av-req':'Enter the Required By Date','av-pur':'Give the Business Purpose (at least 10 characters)',
+  'av-to':'The Expense Period ends before it starts','av-just':'Give the Justification'};
+function errText(errs){const e=errs[0],m=/^(ln-[a-z])-(\d+)$/.exec(e);
+  if(/^receipt/.test(e))return 'Item '+e.split(' ')[1]+': add the Expense Proof';
+  if(m)return 'Item '+(+m[2]+1)+': '+(ERR_NAMES[m[1]]||'fill in the highlighted field');
+  return ERR_NAMES[e]||'Fill in the highlighted fields';}
 function rqValidate(f,draft){const errs=[];const mark=function(id,bad){markErr(id,bad);if(bad)errs.push(id);};
   /* A draft needs something to be known by: its first item's Line Title, or the advance's Title. */
   if(draft){if(f.type==='claim')mark('ln-t-0',!(f.lines[0]||{}).title);else mark('av-title',!f.adv.title);return errs;}
@@ -308,7 +317,7 @@ function confirmSubmit(f,owner,go){
     +'<div class="card p0">'+rows+'</div><div class="btns" style="margin-top:16px"><button class="btn sec" data-act="closeSheet">Cancel</button><button class="btn" id="cs-ok">Submit</button></div>',
     {after:function(w){w.querySelector('#cs-ok').onclick=function(){closeSheet();go();};}});}
 function rqSave(draft){rqRead();if(rqBusy(M.state.rq)){toast('Wait a moment: the receipt is still being saved');return;}const f=M.state.rq,errs=rqValidate(f,draft);
-  if(errs.length){const r=errs.find(function(e){return /^receipt/.test(e);});toast(r&&errs.length===1?'Add the Expense Proof for item '+r.split(' ')[1]:'Fill in the highlighted fields');const el=document.querySelector('.inp.err');if(el)el.scrollIntoView({block:'center',behavior:'smooth'});return;}
+  if(errs.length){toast(errText(errs));const el=document.querySelector('.inp.err');if(el)el.scrollIntoView({block:'center',behavior:'smooth'});return;}
   const p=me(),owner=f.forWho==='team'&&f.forEid?P.byEid(f.forEid):p,isAdv=f.type==='advance',coll=isAdv?DB().advances:DB().expenses;
   if(!draft&&!isAdv&&!f.confirmed){confirmSubmit(f,owner,function(){f.confirmed=true;rqSave(false);});return;}
   delete f.confirmed;
