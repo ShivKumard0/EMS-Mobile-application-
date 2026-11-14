@@ -1,6 +1,6 @@
 {
-  "name": "ADT Employee",
-  "short_name": "ADT",
+  "name": "ONC Employee",
+  "short_name": "ONC",
   "start_url": "./index.html#/home",
   "scope": "./",
   "display": "standalone",
