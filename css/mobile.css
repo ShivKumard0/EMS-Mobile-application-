@@ -402,8 +402,14 @@ html.dsk .sheet{max-height:calc(var(--vh) * 88)}
 .cs-item:first-child{border-top:0}
 .cs-top{display:flex;gap:12px;align-items:flex-start}
 .cs-top .row-t,.cs-top .row-s{white-space:normal}
-.cs-pill{margin-top:8px;gap:5px;height:26px;max-width:100%}
-.cs-pill>span{overflow:hidden;text-overflow:ellipsis}
+.cs-sec{font-size:12px;line-height:16px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--gray);margin:18px 2px 8px}
+.cs-wal{display:grid;gap:10px}
+.cs-wbox{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;margin:0}
+.cs-wbox .row-t{white-space:normal}
+.cs-wico{background:var(--ok-bg);border:1px solid var(--ok-bd);color:var(--ok)}
+.cs-wline{display:flex;align-items:baseline;gap:6px;margin-top:2px}
+.cs-wamt{font-size:20px;line-height:26px;color:var(--ok)}
+.cs-for{margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Approve / Reject: the items this decision is for (a request from the web app) */
 .dec-items{margin-bottom:12px}
 .dec-items .chk{padding:12px 16px;align-items:center}
