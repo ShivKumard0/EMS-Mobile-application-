@@ -138,22 +138,29 @@ M.acts.exStReset=function(){M.state.ex.st='All';closeSheet();render();};
 function blankLine(){return {title:'',cat:'',type:'',date:XTODAY(),end:'',merchant:'',invoice:'',gstin:'',gst:'',notes:'',amount:'',paidBy:'Employee',file:'',size:'',att:null,busy:false,auto:{}};}
 function fsize(n){return n>1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';}
 /* Attachments (js/att.js): the file is saved on the phone; the form and the claim keep a link to it. */
-function attTile(link,act,label){return '<button class="att" '+act+'><span class="att-th">'+(link.src?'<img src="'+E(link.src)+'" alt="">':'<img data-att-id="'+E(link.id)+'" alt="">')+'</span><span class="att-m"><span class="att-n">'+E(link.name||label)+'</span><span class="cap">'+E(label)+' · Tap to view</span></span><span class="chev">'+ic('chev',16)+'</span></button>';}
-function lineAtt(r,l){return l.att||(l.proofUrl?{src:l.proofUrl,name:l.proof||'Receipt',type:'image/jpeg',from:'web'}:null)||MAtt.seed(r.ref,l.id,l.proof);}
+function attTile(link,act,label){return '<button class="att" '+act+'><span class="att-th">'+(link.file?'<span class="att-fi">'+ic('file',22)+'</span>':link.src?'<img src="'+E(link.src)+'" alt="">':'<img data-att-id="'+E(link.id)+'" alt="">')+'</span><span class="att-m"><span class="att-n">'+E(link.name||label)+'</span><span class="cap">'+E(label)+' · Tap to '+(link.file?'open':'view')+'</span></span><span class="chev">'+ic('chev',16)+'</span></button>';}
+/* A file kept in the shared file store (sent by the web app, or uploaded from this phone): {src, name, file} - file when
+   it is not a photo, so it opens in the phone's browser instead of the photo viewer. */
+function webLink(url,name){const n=String(name||url||'');const img=/\.(jpe?g|png|gif|webp|heic|heif)$/i.test(n)||/\.(jpe?g|png|gif|webp)(\?|$)/i.test(String(url||''));
+  return {src:url,name:name||'File',type:img?'image/jpeg':'file',from:'web',file:!img};}
+function openLink(link,title){if(!link)return;if(link.file){window.open(link.src,'_blank','noopener');return;}MAtt.view(link,title);}
+function lineAtt(r,l){return l.att||(l.proofUrl?webLink(l.proofUrl,l.proof||'Receipt'):null)||MAtt.seed(r.ref,l.id,l.proof);}
 /* Item receipts and the advance document: one Attach button that picks a photo or PDF already on the phone
    (photographing a receipt is done with Take photo in Scan receipt at the top). */
 function attachBtn(attrs){return '<div class="pick2"><label class="btn sec pick-b">'+ic('clip',18)+'Attach<input type="file" accept="image/*,application/pdf" '+attrs+'></label></div><div class="cap" style="margin-top:6px">Photo or PDF from your phone, up to 10 MB</div>';}
-function advAtt(r){return r.att||(r.proofUrl?{src:r.proofUrl,name:r.proof||'Document',type:'image/jpeg',from:'web'}:null)||MAtt.seed(r.ref,'doc',r.proof);}
+function advAtt(r){return r.att||(r.proofUrl?webLink(r.proofUrl,r.proof||'Document'):null)||MAtt.seed(r.ref,'doc',r.proof);}
 /* Save a picked file for a form item (obj = a line, or the advance); the form redraws when it is ready. */
 function rqAttach(f,obj,file,from){obj.file=file.name&&!/^image\.\w+$/i.test(file.name)?file.name:'receipt-'+String(Date.now()).slice(-6)+'.jpg';obj.size='';obj.att=null;obj.busy=true;
   const again=function(){if(M.state.rq===f&&/^#\/expenses\/new/.test(location.hash)){rqRead();render();}};
   return MAtt.save(file,from).then(function(link){obj.att=link;obj.file=link.name;obj.size=fsize(link.size)+(link.from==='pdf'?' · PDF saved as an image':'');obj.busy=false;again();})
     .catch(function(e){obj.busy=false;obj.file='';obj.size='';obj.att=null;again();toast(e&&e.message?e.message:'Could not attach the file. Try again.');});}
 function rqBusy(f){return f.type==='claim'?f.lines.some(function(l){return l.busy;}):!!(f.adv&&f.adv.busy);}
-M.acts.attForm=function(el){const f=M.state.rq;if(!f)return;rqRead();const i=el.getAttribute('data-i'),o=i==='doc'?f.adv:f.lines[+i];if(o&&o.att)MAtt.view(o.att,i==='doc'?'Advance document':'Receipt · Item '+(+i+1));};
+M.acts.attForm=function(el){const f=M.state.rq;if(!f)return;rqRead();const i=el.getAttribute('data-i'),o=i==='doc'?f.adv:f.lines[+i];if(o&&o.att)openLink(o.att,i==='doc'?'Advance document':'Receipt · Item '+(+i+1));};
 M.acts.attView=function(el){const r=findRec(el.getAttribute('data-ref'));if(!r)return;const i=el.getAttribute('data-i');
-  if(i==='doc'){MAtt.view(advAtt(r),r.ref+' · Advance document');return;}
-  const l=r.lines[+i];if(l)MAtt.view(lineAtt(r,l),r.ref+' · Item '+(+i+1)+(l.title?' · '+l.title:''));};
+  if(i==='doc'){openLink(advAtt(r),r.ref+' · Advance document');return;}
+  const l=r.lines[+i];if(l)openLink(lineAtt(r,l),r.ref+' · Item '+(+i+1)+(l.title?' · '+l.title:''));};
+/* A claim's own attachments (added on the web app's Attachments tab). */
+M.acts.attClaim=function(el){const r=findRec(el.getAttribute('data-ref'));if(!r)return;const a=(r.attachments||[])[+el.getAttribute('data-i')];if(a)openLink(webLink(a.url,a.name),r.ref+' · '+a.name);};
 function rqBlank(){return {type:'claim',forWho:'self',forEid:'',lines:[blankLine()],just:'',adv:{sub:advTypeList()[0],title:'',amount:'',requiredBy:addDays(XTODAY(),3),from:addDays(XTODAY(),4),to:addDays(XTODAY(),6),purpose:'',notes:'',just:'',file:''},editRef:''};}
 M.acts.rqNew=function(){M.state.rq=rqBlank();go('#/expenses/new');};
 M.acts.rqNewAdv=function(){M.state.rq=rqBlank();M.state.rq.type='advance';go('#/expenses/new');};
@@ -179,7 +186,7 @@ function rqRead(){const f=M.state.rq;if(!f)return;const g=function(id,d){const e
       l.gstin=g('ln-g-'+i,l.gstin||'').trim().toUpperCase();l.gst=g('ln-s-'+i,l.gst==null?'':String(l.gst));l.notes=g('ln-n-'+i,l.notes||'');});}
   else{const a=f.adv;a.sub=g('av-sub',a.sub);a.title=g('av-title',a.title||'').trim();a.amount=g('av-amt',a.amount);a.requiredBy=g('av-req',a.requiredBy);a.from=g('av-from',a.from);a.to=g('av-to',a.to);a.purpose=g('av-pur',a.purpose);a.notes=g('av-notes',a.notes||'');a.just=g('av-just',a.just||'');}}
 function fileBlock(o,act,del,attrs,busyText){return o.file?'<div class="file" style="border:0">'
-  +(o.busy?'<span class="ico"><span class="spin dark sm"></span></span>':o.att?'<button class="att-th sm" data-act="'+act+'" aria-label="View file"><img '+(o.att.src?'src="'+E(o.att.src)+'"':'data-att-id="'+E(o.att.id)+'"')+' alt=""></button>':'<span class="ico">'+ic(/\.pdf$/i.test(o.file)?'file':'camera')+'</span>')
+  +(o.busy?'<span class="ico"><span class="spin dark sm"></span></span>':o.att&&o.att.file?'<button class="ico" data-act="'+act+'" aria-label="Open file">'+ic('file')+'</button>':o.att?'<button class="att-th sm" data-act="'+act+'" aria-label="View file"><img '+(o.att.src?'src="'+E(o.att.src)+'"':'data-att-id="'+E(o.att.id)+'"')+' alt=""></button>':'<span class="ico">'+ic(/\.pdf$/i.test(o.file)?'file':'camera')+'</span>')
   +'<div class="row-m"><div class="row-t" style="font-size:14px">'+E(o.file)+'</div><div class="cap">'+(o.busy?busyText:E(o.size||''))+'</div></div><button class="rm" '+del+'>Remove</button></div>':attachBtn(attrs);}
 route('/expenses/new',function(){if(!M.state.rq)M.state.rq=rqBlank();const f=M.state.rq,p=me(),reps=P.reports(p);
   const owner=f.forWho==='team'&&f.forEid?P.byEid(f.forEid):p;
@@ -380,6 +387,8 @@ route('/r/:ref',function(pr){const r=findRec(pr.ref);if(!r)return null;const p=m
       const cols=l.cols||{},gstin=l.gstin||cols['Vendor GSTIN']||'',g=l.gst!=null&&l.gst!==''?l.gst:(cols['GST Amount']||''),cat=l.category&&l.category!==l.subCat?l.category+' / ':'';
       return '<div class="row" style="align-items:flex-start"'+(tx?' data-go="#/t/'+tx.ref+'"':'')+'><span class="ico">'+ic(l.paidBy==='Corporate Card'?'card':l.paidBy==='Company Advance'?'adv':'receipt')+'</span><div class="row-m"><div class="row-t" style="white-space:normal">'+E(l.title||l.merchant||('Item '+(i+1)))+'</div><div class="row-s" style="white-space:normal">'+E(cat+(l.subCat||''))+(l.start?' · '+E(MFmt.dshort(l.start)):'')+(l.merchant&&l.merchant!==(l.title||l.merchant)?' · '+E(l.merchant):'')+'</div><div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><span class="tag">'+E(PAID[l.paidBy]||l.paidBy||'')+(tx?' · '+E(tx.ref):'')+'</span>'+(l.invoice?'<span class="tag">Inv '+E(l.invoice)+'</span>':'')+(gstin?'<span class="tag">GSTIN '+E(gstin)+'</span>':'')+(g!==''?'<span class="tag">GST '+money(+g)+'</span>':'')+(l.ocr?'<span class="tag">Scanned</span>':'')+(l.proof&&!lineAtt(r,l)?'<span class="tag">'+ic('file',11).replace('<svg','<svg style="display:inline;vertical-align:-1px"')+' '+E(l.proof)+'</span>':'')+'</div>'
         +(lineAtt(r,l)?attTile(lineAtt(r,l),'data-act="attView" data-ref="'+E(r.ref)+'" data-i="'+i+'"','Receipt'):'')+'</div><div class="row-r"><span class="b num">'+money(l.amount)+'</span></div></div>';}).join('')+'</div>';}
+  if(r.kind==='expense'&&(r.attachments||[]).length)html+='<div class="h2">Attachments · '+r.attachments.length+'</div><div class="card att-list">'
+    +r.attachments.map(function(a,i){return attTile(webLink(a.url,a.name),'data-act="attClaim" data-ref="'+E(r.ref)+'" data-i="'+i+'"',(a.type||'File')+(a.by?' · '+a.by:''));}).join('')+'</div>';
   if(r.kind==='advance'){html+='<div class="h2">Details</div><div class="card">'+kv('Advance Type',E(r.category))+kv('Required by',E(MFmt.date(r.requiredBy)))+(r.periodFrom?kv('Expense period',E(MFmt.dshort(r.periodFrom))+' – '+E(MFmt.date(r.periodTo))):'')+(advAtt(r)?'<div class="kv-col"><span class="k">Supporting document</span>'+attTile(advAtt(r),'data-act="attView" data-ref="'+E(r.ref)+'" data-i="doc"','Supporting document')+'</div>':r.proof?kv('Supporting document',E(r.proof)):'')+'<div class="kv-col"><span class="k">Business purpose</span>'+E(r.purpose||'')+'</div>'+(r.notes?'<div class="kv-col"><span class="k">Notes</span>'+E(r.notes)+'</div>':'')+'</div>';
     if(r.status==='Approved'){const iss=advIssued(r),used=advUsed(r),ret=advReturned(r),bal=iss-used-ret;
       html+='<div class="h2">Money</div><div class="card">'+(iss?kv('Paid to you',money(iss)+' <span class="cap">'+E(((r.ledger||[]).find(function(x){return x.type==='Issuance';})||{}).ref||'')+'</span>')+kv('Settled with claims',money(used))+(ret?kv('Returned',money(ret)):'')+kv('Balance',(bal>0?'<span class="warn-t b">'+money(bal)+'</span>':money(0))):kv('Payment','<span class="warn-t">Ready for Finance to pay</span>'))

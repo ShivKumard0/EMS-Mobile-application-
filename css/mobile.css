@@ -407,3 +407,6 @@ html.dsk .sheet{max-height:calc(var(--vh) * 88)}
 .dec-items .chk{padding:12px 16px;align-items:center}
 .dec-l .row-m>span{display:block}
 .dec-l .row-t{white-space:normal}
+/* A file that is not a photo (PDF, Word, Excel … from the web app): an icon in place of the thumbnail; a claim's attachments listed */
+.att-fi{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--slate)}
+.att-list{display:grid;gap:8px}
