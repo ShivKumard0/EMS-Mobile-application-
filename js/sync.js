@@ -87,6 +87,18 @@ const MSync=(function(){
         return Object.assign({},old,{code:code,name:x.name||old.name||code,balance:x.available||0,loads:x.loaded||0,spent:x.spent||0,credits:x.refunded||0});
       });
     });
+    cardState(d);
+  }
+  /* Each card as the web has it - status, hold, an open replacement (14 Nov 2026). A card with an action still on its way
+     keeps what the phone shows until the web answers. */
+  function cardState(d){
+    const db=MStore.db,pend=S().pend||{};
+    (d.state||[]).forEach(function(x){
+      const c=db.cards.find(function(y){return y.id===x.id;});if(!c)return;
+      if(Object.keys(pend).some(function(k){return pend[k].wid==='card:'+x.id;}))return;
+      c.status=x.status;c.hold=x.hold||null;c.repl=x.repl||null;c.forms=x.forms||[];if(x.type)c.type=x.type;if(x.key)c.ref=x.key;
+      delete c.replacement;
+    });
   }
   const goTo={};
   function record(d){
@@ -157,6 +169,14 @@ const MSync=(function(){
       const r=db.expenses.concat(db.advances).find(function(x){return x.sendState&&x.cid===it.cid;});
       if(okd){if(r){r.sendState='sent';goTo[r.ref]=res.ref;}say(res.ref+' submitted');}
       else{if(r){r.sendState='failed';r.sendError=res.error||'Not accepted by the web app.';}say('Not submitted: '+(res.error||'not accepted by the web app'));}
+      return;
+    }
+    if(/^card\./.test(it.type)){
+      if(okd)say(it.type==='card.hold'?'Card on hold':it.type==='card.releaseHold'?(res.released?'Hold released':'Release requested · a card administrator reviews it')
+        :it.type==='card.reportLost'?'Card reported · block requested from the bank':'Replacement '+(res.repl||'')+' requested'+(res.at?' · with '+res.at:''));
+      else say('Not done: '+(res.error||'not accepted by the web app'));
+      /* the card reads as the web has it again */
+      Object.keys(MStore.db.wallets||{}).forEach(function(k){cardState(MStore.db.wallets[k]);});
       return;
     }
     if(!okd)say((p.ref?p.ref+': ':'')+(res.error||'Not recorded by the web app.'));
