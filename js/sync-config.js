@@ -3,6 +3,6 @@
    from Supabase → Project Settings → API Keys - the same two values as the web app's js/ems-sync-config.js.
    Never put the secret key here: this file is public. Left empty, the app works on its own copy as before. */
 window.M_SYNC_CONFIG={
-  url:'',
-  key:''
+  url:'https://comjdziyxazjlzcrdxym.supabase.co',
+  key:'sb_publishable_9Y6yEdXGLk8EMGYYHp1gXQ_ScnQ8E_m'
 };
