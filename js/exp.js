@@ -6,13 +6,9 @@ const WEB_SUBS={'Travel Reimbursement':['One Way','Two Way','Intercity Travel - 
   'Accommodation':['Accommodation'],'Fuel Reimbursement':['One Way','Two Way','Bike','Car'],'Team Outing':['Monthly','Quarterly','Annual'],'Office Events':['Monthly','Annual','Festival'],
   'Office Stationery':['Monthly','Annual','Festival'],'Telephone & Internet':['Mobile','Broadband'],'Books & Learning':['Books','Course','Certification']};
 const WEB_ADV=['Travel Advance','Business Expense Advance','Employee Expense Advance'];
-/* The wallet whose balance the submit summary shows for each Sub Category (the same table as the web app). */
-const CAT_WALLET={'Meal Allowance':'MEAL','Fuel Reimbursement':'FUEL','Telephone & Internet':'TEL','Travel Reimbursement':'CORP','Accommodation':'CORP','Team Outing':'CORP',
-  'Office Events':'CORP','Office Stationery':'CORP','Books & Learning':''};
 function subsMap(){const l=MStore.db.lists;return l&&l.subcats&&Object.keys(l.subcats).length?l.subcats:WEB_SUBS;}
 function catList(){const m=subsMap(),l=MStore.db.lists;return (l&&l.cats?l.cats:Object.keys(WEB_SUBS)).filter(function(c){return m[c];});}
 function advTypeList(){const l=MStore.db.lists;return l&&l.advTypes&&l.advTypes.length?l.advTypes:WEB_ADV;}
-function catWalletMap(){const l=MStore.db.lists;return l&&l.catWallet&&Object.keys(l.catWallet).length?l.catWallet:CAT_WALLET;}
 const PAID={Employee:'Paid by me','Corporate Card':'Company card','Company Advance':'Travel advance'};
 const MCC={'4121':'Taxi and cabs','5812':'Restaurant','5814':'Café and fast food','5541':'Fuel station','5943':'Stationery','7523':'Parking','7011':'Hotel','7338':'Printing','4814':'Telecom','5732':'Electronics'};
 const WICON={CORP:'corp',MEAL:'meal',FUEL:'fuel',GIFT:'gift',TEL:'tel',REIMB:'wallet'};
@@ -47,19 +43,6 @@ function pendingAtText(r){if(!r.pendingAt||showStatus(r)!=='Pending')return '';r
 function kindLabel(r){return r.kind==='advance'?'Advance':r.kind==='card load'?'Card load':'Claim';}
 function cardById(id){return DB().cards.find(function(c){return c.id===id;})||null;}
 function walletName(code){const l=MStore.db.lists;return (l&&l.walletNames&&l.walletNames[code])||{CORP:'Corporate Expense',MEAL:'Meal',FUEL:'Fuel',GIFT:'Gift',TEL:'Telecom',REIMB:'Reimbursement'}[code]||code;}
-/* The employee's current balance in the wallet a Sub Category belongs to: the web app's balances when the sync is on,
-   this phone's card wallets otherwise. */
-function walletInfo(eid,cat){
-  const code=catWalletMap()[cat];if(!code)return {key:'none:'+cat,name:cat||'Other',state:'none',text:'No wallet',muted:true};
-  const w=(MStore.db.wallets||{})[eid];let codes=[],bal=0;
-  if(w){(w.cards||[]).forEach(function(c){(c.wallets||[]).forEach(function(k){if(codes.indexOf(k)<0)codes.push(k);});});bal=((w.wallets||{})[code]||{}).available||0;}
-  else{const cs=DB().cards.filter(function(c){return c.employeeEid===eid&&c.status!=='Blocked'&&c.status!=='Closed';});
-    cs.forEach(function(c){(c.wallets||[]).forEach(function(x){if(codes.indexOf(x.code)<0)codes.push(x.code);});});
-    const x=cs.map(function(c){return (c.wallets||[]).find(function(q){return q.code===code;});}).find(Boolean);bal=x?x.balance||0:0;}
-  if(codes.indexOf(code)<0)return {key:code,name:walletName(code)+' wallet',state:'off',text:walletName(code)+' wallet · not on your card',muted:true};
-  return {key:code,name:walletName(code)+' wallet',state:'ok',available:bal,text:walletName(code)+' wallet · '+money(bal)+' available'};}
-function walletCell(eid,cat){const x=walletInfo(eid,cat);return {text:x.text,muted:!!x.muted};}
-
 /* ── Approval routes (web: AWF-18 / AWF-19; card loads: Card approver review) ── */
 function uidOfEid(eid){return P.userOf(P.byEid(eid));}
 /* Manager review: Ritu Sen for everyone, as on the web app (product owner, 14 Nov 2026); a request Ritu raises herself, or
@@ -307,26 +290,15 @@ function claimPayload(f,owner,p){const adv=myOpenAdvances(owner.eid)[0],card=DB(
 function advPayload(f,owner,p){const a=f.adv;return {eid:owner.eid,claimFor:owner.eid===p.eid?'Self':'Others',type:a.sub,title:a.title,amount:+a.amount||0,requiredBy:a.requiredBy,periodFrom:a.from||'',periodTo:a.to||'',
   purpose:a.purpose||'',notes:a.notes||'',just:a.just||'',proof:a.file||'',proofUrl:''};}
 function fileOf(att,path,line){if(!att)return null;if(att.id)return {att:att.id,path:path,line:line};if(att.src)return {src:new URL(att.src,location.href).href,path:path,line:line};return null;}
-/* Submit on a claim: "Are you sure you want to submit?" with each item, its Sub Category and amount and, beside it, the
-   employee's current balance in that Sub Category's wallet (product owner, 14 Nov 2026). Information only. */
+/* Submit on a claim: "Are you sure you want to submit?" (product owner, 14 Nov 2026) - a confirmation popup with the claim's
+   total and its items. No wallet balance: these are claims. */
 function confirmSubmit(f,owner,go){
-  const total=f.lines.reduce(function(s,l){return s+(+l.amount||0);},0),n=f.lines.length,showW=!(MStore.db.lists&&MStore.db.lists.usesWallets===false);
+  const total=f.lines.reduce(function(s,l){return s+(+l.amount||0);},0),n=f.lines.length;
   const rows=f.lines.map(function(l){
     return '<div class="cs-item"><div class="cs-top"><div class="row-m"><div class="row-t">'+E(l.title||'Item')+'</div><div class="row-s">'+E(l.cat)+(l.type?' / '+E(l.type):'')+'</div></div><span class="b num">'+money(l.amount)+'</span></div></div>';}).join('');
-  /* Wallet balance, a section of its own (product owner, 14 Nov 2026: "a proper box partition"): one box per wallet the
-     claim touches - its available balance and the items it is for - then categories without a wallet. */
-  let wal='';
-  if(showW){const groups=[];
-    f.lines.forEach(function(l){const x=walletInfo(owner.eid,l.cat);let g=groups.find(function(y){return y.key===x.key;});
-      if(!g){g=Object.assign({items:[],sum:0},x);groups.push(g);}g.items.push(l.title||'Item');g.sum+=+l.amount||0;});
-    groups.sort(function(a,b){return (a.state!=='ok')-(b.state!=='ok');});
-    wal='<div class="cs-sec">Wallet balance</div><div class="cs-wal">'+groups.map(function(g){const ok=g.state==='ok';
-      return '<div class="card cs-wbox"><span class="ico round'+(ok?' cs-wico':'')+'">'+ic('wallet',18)+'</span><div class="row-m"><div class="row-t">'+E(g.name)+'</div>'
-        +(ok?'<div class="cs-wline"><span class="b num cs-wamt">'+money(g.available)+'</span><span class="cap">available</span></div>':'<div class="meta cs-wline">'+(g.state==='off'?'Not on your card':'No wallet for this category')+'</div>')
-        +'<div class="cap cs-for">For: '+E(g.items.join(', '))+' · '+money(g.sum)+'</div></div></div>';}).join('')+'</div>';}
   sheet('','<div class="cs-head"><div class="tick">'+ic('check',28)+'</div><div class="cs-q">Are you sure you want to submit?</div><div class="meta">Check the items below. Once submitted, the claim goes for approval.</div></div>'
     +'<div class="cs-sum"><div class="row-m"><div class="cap">Expense Claim</div><div class="cs-who">'+n+' item'+(n===1?'':'s')+' · '+E(owner.name)+'</div></div><div class="cs-amt"><div class="cap">Total claim amount</div><div class="b num cs-total">'+money(total)+'</div></div></div>'
-    +'<div class="card p0">'+rows+'</div>'+wal
+    +'<div class="card p0">'+rows+'</div>'
     +'<div class="btns" style="margin-top:16px"><button class="btn sec" data-act="closeSheet">Cancel</button><button class="btn" id="cs-ok">Yes, submit</button></div>',
     {after:function(w){w.querySelector('#cs-ok').onclick=function(){closeSheet();go();};}});}
 function rqSave(draft){rqRead();if(rqBusy(M.state.rq)){toast('Wait a moment: the receipt is still being saved');return;}const f=M.state.rq,errs=rqValidate(f,draft);
