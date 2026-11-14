@@ -60,12 +60,12 @@ const P={
 };
 /* The people offered by the profile picker and Switch User: employees and approvers (user decision, 10 Nov 2026). */
 const M_PROFILES=[
-  ['kabir.joshi@novaretail.in','Employee'],
-  ['arjun.rao@novaretail.in','Employee (Cardholder)'],
-  ['ritu.sen@novaretail.in','Reporting Manager'],
-  ['rohan.mehta@novaretail.in','Finance Admin'],
-  ['ananya.iyer@novaretail.in','Card Approver'],
-  ['neel.arora@novaretail.in','Card / Funding Verifier']
+  ['kabir.joshi@opendhi.in','Employee'],
+  ['arjun.rao@opendhi.in','Employee (Cardholder)'],
+  ['ritu.sen@opendhi.in','Reporting Manager'],
+  ['rohan.mehta@opendhi.in','Finance Admin'],
+  ['ananya.iyer@opendhi.in','Card Approver'],
+  ['neel.arora@opendhi.in','Card / Funding Verifier']
 ];
 function me(){const uid=MStore.db.session.userId;return uid?P.byUser(uid):null;}
 function myUid(){return MStore.db.session.userId||'';}

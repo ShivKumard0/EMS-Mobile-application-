@@ -48,7 +48,7 @@ function uidOfEid(eid){return P.userOf(P.byEid(eid));}
 /* Manager review: Ritu Sen for everyone, as on the web app (product owner, 14 Nov 2026); a request Ritu raises herself, or
    one for her, goes to Karan Shah instead. */
 function uidOfEmail(m){const p=MStore.db.people.find(function(x){return x.email===m;});return p?P.userOf(p):'';}
-function stageOneApprovers(ownerE,creatorUid){const rs=uidOfEmail('ritu.sen@novaretail.in'),ks=uidOfEmail('karan.shah@novaretail.in');
+function stageOneApprovers(ownerE,creatorUid){const rs=uidOfEmail('ritu.sen@opendhi.in'),ks=uidOfEmail('karan.shah@opendhi.in');
   const u=rs&&rs!==creatorUid&&rs!==uidOfEid(ownerE)?rs:ks;return u?[u]:[];}
 function financeApprover(r){const used=[uidOfEid(ownerEid(r)),r.createdBy].concat((r.wf&&r.wf.stages||[]).reduce(function(a,s){return a.concat((s.decisions||[]).map(function(d){return d.who;}));},[]));return used.indexOf(FIN_UID)>=0?FIN_ALT_UID:FIN_UID;}
 function buildWf(kind,ownerE,creatorUid){return {wfKey:kind==='advance'?'AWF-19':'AWF-18',wfName:kind==='advance'?'Advance - Manager then Finance':'Default - Manager then Finance',open:true,current:0,

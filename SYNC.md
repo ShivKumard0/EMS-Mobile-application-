@@ -13,7 +13,7 @@ The web app (this repo) and the mobile app (repo `EMS-Mobile-application-`) shar
 
 The web app must be open (on the laptop) for phone actions to be filed. Until then they wait safely and are applied as soon as it opens.
 
-## What syncs (Nova Retail, presentation)
+## What syncs (Opendhi, presentation)
 
 | From the phone (commands) | Filed on the web by |
 |---|---|

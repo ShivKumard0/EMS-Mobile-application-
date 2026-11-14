@@ -74,7 +74,8 @@ const MSync=(function(){
   /* ── Reading what the web app published ── */
   function people(d){
     const db=MStore.db;
-    if(d.people&&d.people.length)db.people=d.people;
+    /* The addresses are @opendhi.in (product owner, 14 Nov 2026); a list shared before the web was renamed reads the same. */
+    if(d.people&&d.people.length)db.people=d.people.map(function(p){return p&&p.email?Object.assign({},p,{email:String(p.email).replace(/@novaretail\.in$/i,'@opendhi.in')}):p;});
     if(d.users&&Object.keys(d.users).length)db.users=d.users;
   }
   function wallets(d){

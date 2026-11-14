@@ -27,12 +27,14 @@ const MStore=(function(){
   function load(){
     try{const x=JSON.parse(localStorage.getItem(KEY)||'null');if(x&&x.version===window.M_SEED.version&&x.hrVersion===window.M_HR.version)db=x;}catch(e){db=null;}
     if(!db){db=fresh();db.hrVersion=window.M_HR.version;save(true);}
-    /* The company is Opendhi and its card OpenDhi x RBL (product owner, 14 Nov 2026): a copy kept on this phone from
-       before is renamed in place (the company and the people records), so nothing done on the phone is lost. */
-    try{['hr','entity'].forEach(function(k){
-      const t=JSON.stringify(db[k]||{});if(!/Nova Retail|Nova card/.test(t))return;
-      db[k]=JSON.parse(t.replace(/Nova Retail Pvt Ltd|Nova Retail/g,'Opendhi').replace(/\bNova card\b/g,'OpenDhi x RBL card'));save(true);
-    });}catch(e){}
+    /* Every "Nova" is Opendhi (product owner, 14 Nov 2026): the company, the card (OpenDhi x RBL), funding accounts,
+       codes and e-mail addresses (@opendhi.in). A copy kept on this phone from before is renamed in place, so nothing
+       done on the phone is lost. */
+    try{const t=JSON.stringify(db);if(/nova/i.test(t.replace(/adt-mobile-nova/g,''))){
+      db=JSON.parse(t.replace(/\b([Aa]) Nova Multi Wallet Card/g,'$1n OpenDhi x RBL').replace(/Nova Multi Wallet Card|NOVA X RBL Multiwallet Card/g,'OpenDhi x RBL')
+        .replace(/\bNova card\b/g,'OpenDhi x RBL card').replace(/Nova Retail Pvt Ltd|Nova Retail/g,'Opendhi').replace(/@novaretail\.in/gi,'@opendhi.in')
+        .replace(/\bNOVA-/g,'OPENDHI-').replace(/\bNova\b/g,'Opendhi'));save(true);
+    }}catch(e){}
   }
   function save(quiet){try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}if(!quiet)subs.forEach(function(f){try{f();}catch(e){}});}
   function cid(){return 'm-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7);}
