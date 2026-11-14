@@ -27,6 +27,9 @@ const MStore=(function(){
   function load(){
     try{const x=JSON.parse(localStorage.getItem(KEY)||'null');if(x&&x.version===window.M_SEED.version&&x.hrVersion===window.M_HR.version)db=x;}catch(e){db=null;}
     if(!db){db=fresh();db.hrVersion=window.M_HR.version;save(true);}
+    /* The company is Opendhi (product owner, 14 Nov 2026): a copy kept on this phone from before is renamed in place,
+       so nothing done on the phone is lost. */
+    try{const t=JSON.stringify(db.hr||{});if(t.indexOf('Nova Retail')>=0){db.hr=JSON.parse(t.replace(/Nova Retail Pvt Ltd|Nova Retail/g,'Opendhi'));save(true);}}catch(e){}
   }
   function save(quiet){try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}if(!quiet)subs.forEach(function(f){try{f();}catch(e){}});}
   function cid(){return 'm-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7);}

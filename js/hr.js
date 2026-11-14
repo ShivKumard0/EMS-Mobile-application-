@@ -171,7 +171,7 @@ route('/more',function(){const p=me(),h=myHR(),pend=approvalsFor(myUid()).length
    +'<div class="card p0" style="margin-top:12px"><div class="row tap" data-act="signOut"><span class="ico" style="background:var(--bad-bg);color:var(--bad)">'+ic('out')+'</span><div class="row-m"><div class="row-t bad-t">Sign out</div></div></div></div>'
    +'<div class="cap" style="text-align:center;margin-top:16px">ADT · Employee v1.0 · '+E(MStore.db.entity.name)+'</div><div style="text-align:center;margin-top:6px"><button class="cap" style="text-decoration:underline" data-act="resetData">Reset app data</button></div>';
   return {title:'More',tab:'more',html:html};});
-M.acts.resetData=function(){confirmBox('Reset app data?','Everything done in the app on this phone is removed and the prepared Nova Retail data comes back.','Reset',function(){MStore.reset();M.state={};render();toast('App data reset');},true);};
+M.acts.resetData=function(){confirmBox('Reset app data?','Everything done in the app on this phone is removed and the prepared Opendhi data comes back.','Reset',function(){MStore.reset();M.state={};render();toast('App data reset');},true);};
 
 /* ── Profile ── */
 function completeness(p){const h=P.hr(p),items=[[!!h.emergency,'Add an emergency contact'],[(h.bank||{}).status==='Verified','Bank details waiting for verification'],[!(h.docs&&h.docs.todo.some(function(d){return d.m;})),'Upload your mandatory documents'],[!(h.docs&&h.docs.up.some(function(d){return d.s==='Re-upload';})),'Re-upload a document'],[!!(h.addr&&h.addr.line),'Add your address']];

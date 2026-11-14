@@ -15,7 +15,7 @@ window.M_HR={
   announcements:[
     {id:'AN-104',src:'HR',by:'Karan Shah',title:'Updated travel and expense policy',when:'2026-11-10',eff:'2026-11-01',
      preview:'Local travel, hotel limits and claim deadlines are updated from 1 November.',
-     body:['From 1 November 2026 these limits apply to every Nova Retail employee:',['Local travel: up to ₹5,000 a month for Sales, ₹3,000 for other teams.','Hotels: up to ₹4,500 a night in metro cities, ₹3,000 elsewhere.','Submit a claim within 30 days of the expense.','Payments made with your Nova card are recorded automatically and need no claim.'],'Read the full Expense policy under More → Policies and acknowledge it.']},
+     body:['From 1 November 2026 these limits apply to every Opendhi employee:',['Local travel: up to ₹5,000 a month for Sales, ₹3,000 for other teams.','Hotels: up to ₹4,500 a night in metro cities, ₹3,000 elsewhere.','Submit a claim within 30 days of the expense.','Payments made with your Nova card are recorded automatically and need no claim.'],'Read the full Expense policy under More → Policies and acknowledge it.']},
     {id:'AN-103',src:'Finance',by:'Rohan Mehta',title:'Festival gift loaded to your card',when:'2026-11-10',
      preview:'Your ₹5,000 festival gift is in the Gift wallet of your Nova card.',
      body:['Your festival gift of ₹5,000 has been loaded to the Gift wallet of your Nova card.',['Use it at any electronics, apparel or gifting store.','It is valid until 31 December 2026.','Gift spends need no expense claim.'],'Employees whose card is not issued yet receive it when the card is active.']},
