@@ -15,10 +15,10 @@ window.M_HR={
   announcements:[
     {id:'AN-104',src:'HR',by:'Karan Shah',title:'Updated travel and expense policy',when:'2026-11-10',eff:'2026-11-01',
      preview:'Local travel, hotel limits and claim deadlines are updated from 1 November.',
-     body:['From 1 November 2026 these limits apply to every Opendhi employee:',['Local travel: up to ₹5,000 a month for Sales, ₹3,000 for other teams.','Hotels: up to ₹4,500 a night in metro cities, ₹3,000 elsewhere.','Submit a claim within 30 days of the expense.','Payments made with your Nova card are recorded automatically and need no claim.'],'Read the full Expense policy under More → Policies and acknowledge it.']},
+     body:['From 1 November 2026 these limits apply to every Opendhi employee:',['Local travel: up to ₹5,000 a month for Sales, ₹3,000 for other teams.','Hotels: up to ₹4,500 a night in metro cities, ₹3,000 elsewhere.','Submit a claim within 30 days of the expense.','Payments made with your OpenDhi x RBL card are recorded automatically and need no claim.'],'Read the full Expense policy under More → Policies and acknowledge it.']},
     {id:'AN-103',src:'Finance',by:'Rohan Mehta',title:'Festival gift loaded to your card',when:'2026-11-10',
-     preview:'Your ₹5,000 festival gift is in the Gift wallet of your Nova card.',
-     body:['Your festival gift of ₹5,000 has been loaded to the Gift wallet of your Nova card.',['Use it at any electronics, apparel or gifting store.','It is valid until 31 December 2026.','Gift spends need no expense claim.'],'Employees whose card is not issued yet receive it when the card is active.']},
+     preview:'Your ₹5,000 festival gift is in the Gift wallet of your OpenDhi x RBL card.',
+     body:['Your festival gift of ₹5,000 has been loaded to the Gift wallet of your OpenDhi x RBL card.',['Use it at any electronics, apparel or gifting store.','It is valid until 31 December 2026.','Gift spends need no expense claim.'],'Employees whose card is not issued yet receive it when the card is active.']},
     {id:'AN-102',src:'HR',by:'Riya Kapoor',title:'Expenses now on your phone',when:'2026-11-09',
      preview:'Submit claims, request advances and track approvals from the ADT app.',
      body:['You can now do your expenses from your phone:',['Submit expense claims with photos of your receipts.','Request a travel advance and see when it is paid.','Managers can approve requests on the go.'],'Open More → Expenses to start.']},
@@ -32,7 +32,7 @@ window.M_HR={
     {id:'POL-TRV',group:'Finance',name:'Travel policy',ver:'v2 · 1 Nov 2026',need:true,
      body:['Book economy travel and hotels within the limits below.',['Hotels up to ₹4,500 a night in metros, ₹3,000 elsewhere.','Local travel up to ₹5,000 a month for Sales.','Request a travel advance at least 3 days before the trip; return unspent cash within 7 days.']]},
     {id:'POL-CRD',group:'Finance',name:'Corporate card policy',ver:'v1 · 1 Apr 2026',need:false,
-     body:['Your Nova card is for business and benefit spending only.',['Raise a dispute within 30 days for any payment you did not make.','Report a lost or stolen card at once from My cards.']]},
+     body:['Your OpenDhi x RBL card is for business and benefit spending only.',['Raise a dispute within 30 days for any payment you did not make.','Report a lost or stolen card at once from My cards.']]},
     {id:'POL-LV',group:'HR & Leave',name:'Leave policy',ver:'v1 · 1 Apr 2026',need:false,body:['Casual 12, Sick 6 and Earned 15 days a year (April to March). Earned leave starts after six months.']},
     {id:'POL-COC',group:'HR & Leave',name:'Code of conduct',ver:'v1 · 1 Apr 2026',need:false,body:['Act with integrity, respect colleagues and customers, and report concerns to HR or Compliance.']},
     {id:'POL-IT',group:'IT & Security',name:'Acceptable use',ver:'v1 · 1 Apr 2026',need:false,body:['Use company devices for work, keep them locked and never share passwords or OTPs.']}

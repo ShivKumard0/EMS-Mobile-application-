@@ -457,7 +457,7 @@ function cardTxns(c){return DB().txns.filter(function(t){return t.cardId===c.id;
 /* The card drawn as the web app draws it (My Cards): number and expiry blurred until the card is tapped.
    The number is worked out the same way as the web card, from the card's own reference, and never saved. */
 const CARD_BANK={rbl:'RBL Bank',icici:'ICICI Bank'};
-function cardProg(c){return c.programme||(String(MStore.db.entity.name||'').split(' ')[0]+' Multi Wallet Card').trim();}
+function cardProg(c){return c.programme||'OpenDhi x RBL';}   // the card's name (product owner, 14 Nov 2026)
 function cardSecret(c){const l4=String(c.last4||'----');let h=2166136261;
   (String(c.ref||'').split('-').pop()+'|'+c.id+'|'+c.employeeEid).split('').forEach(function(ch){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0;});
   const d=('00000000'+(h%100000000)).slice(-8),iso=/^\d{4}-\d{2}/.test(c.issueDate||'')?c.issueDate:XTODAY();
