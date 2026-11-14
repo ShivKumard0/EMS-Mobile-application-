@@ -389,11 +389,21 @@ html.dsk .sheet{max-height:calc(var(--vh) * 88)}
 .sug-i{display:block;width:100%;text-align:left;padding:12px 14px;font-size:15px;line-height:20px;border-top:1px solid var(--border)}
 .sug-i:first-of-type{border-top:0}
 .sug-i:active{background:var(--muted)}
-/* Submit summary: each item, its Sub Category and amount, and the wallet balance beside it (14 Nov 2026) */
-.cs-row{align-items:flex-start}
-.cs-row .row-t,.cs-row .row-s{white-space:normal}
-.cs-r .cs-w{font-size:12px;line-height:16px;color:var(--ok);white-space:nowrap}
-.cs-r .cs-w.mut{color:var(--gray)}
+/* Submit summary as a confirmation step: a tick, the question, the total, each item with its wallet balance as a badge (14 Nov 2026) */
+.cs-head{text-align:center;margin:-4px 0 16px}
+.cs-head .tick{margin:0 auto 12px}
+.cs-q{font-size:18px;line-height:24px;font-weight:600;color:var(--ink)}
+.cs-head .meta{margin-top:4px}
+.cs-sum{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;margin-bottom:12px;border:1px solid var(--border);border-radius:12px;background:var(--muted)}
+.cs-who{font-size:14px;line-height:20px;color:var(--ink);margin-top:2px}
+.cs-amt{text-align:right;flex-shrink:0}
+.cs-total{font-size:22px;line-height:28px;margin-top:2px}
+.cs-item{padding:13px 16px;border-top:1px solid var(--border)}
+.cs-item:first-child{border-top:0}
+.cs-top{display:flex;gap:12px;align-items:flex-start}
+.cs-top .row-t,.cs-top .row-s{white-space:normal}
+.cs-pill{margin-top:8px;gap:5px;height:26px;max-width:100%}
+.cs-pill>span{overflow:hidden;text-overflow:ellipsis}
 /* Approve / Reject: the items this decision is for (a request from the web app) */
 .dec-items{margin-bottom:12px}
 .dec-items .chk{padding:12px 16px;align-items:center}

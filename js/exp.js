@@ -311,10 +311,11 @@ function fileOf(att,path,line){if(!att)return null;if(att.id)return {att:att.id,
 function confirmSubmit(f,owner,go){
   const total=f.lines.reduce(function(s,l){return s+(+l.amount||0);},0),n=f.lines.length,showW=!(MStore.db.lists&&MStore.db.lists.usesWallets===false);
   const rows=f.lines.map(function(l){const w=showW?walletCell(owner.eid,l.cat):null;
-    return '<div class="row cs-row"><div class="row-m"><div class="row-t">'+E(l.title||'Item')+'</div><div class="row-s">'+E(l.cat)+(l.type?' / '+E(l.type):'')+'</div></div>'
-      +'<div class="row-r cs-r"><span class="b num">'+money(l.amount)+'</span>'+(w?'<span class="cs-w'+(w.muted?' mut':'')+'">'+E(w.text)+'</span>':'')+'</div></div>';}).join('');
-  sheet('Are you sure you want to submit?','<div class="meta" style="margin-bottom:12px">Expense Claim · '+n+' item'+(n===1?'':'s')+' · '+money(total)+(owner.eid!==me().eid?' · '+E(owner.name):'')+'</div>'
-    +'<div class="card p0">'+rows+'</div><div class="btns" style="margin-top:16px"><button class="btn sec" data-act="closeSheet">Cancel</button><button class="btn" id="cs-ok">Submit</button></div>',
+    return '<div class="cs-item"><div class="cs-top"><div class="row-m"><div class="row-t">'+E(l.title||'Item')+'</div><div class="row-s">'+E(l.cat)+(l.type?' / '+E(l.type):'')+'</div></div><span class="b num">'+money(l.amount)+'</span></div>'
+      +(w?'<span class="bdg '+(w.muted?'mut':'ok')+' cs-pill">'+(w.muted?'':ic('wallet',13))+'<span>'+E(w.text)+'</span></span>':'')+'</div>';}).join('');
+  sheet('','<div class="cs-head"><div class="tick">'+ic('check',28)+'</div><div class="cs-q">Are you sure you want to submit?</div><div class="meta">Check the items below. Once submitted, the claim goes for approval.</div></div>'
+    +'<div class="cs-sum"><div class="row-m"><div class="cap">Expense Claim</div><div class="cs-who">'+n+' item'+(n===1?'':'s')+' · '+E(owner.name)+'</div></div><div class="cs-amt"><div class="cap">Total claim amount</div><div class="b num cs-total">'+money(total)+'</div></div></div>'
+    +'<div class="card p0">'+rows+'</div><div class="btns" style="margin-top:16px"><button class="btn sec" data-act="closeSheet">Cancel</button><button class="btn" id="cs-ok">Yes, submit</button></div>',
     {after:function(w){w.querySelector('#cs-ok').onclick=function(){closeSheet();go();};}});}
 function rqSave(draft){rqRead();if(rqBusy(M.state.rq)){toast('Wait a moment: the receipt is still being saved');return;}const f=M.state.rq,errs=rqValidate(f,draft);
   if(errs.length){toast(errText(errs));const el=document.querySelector('.inp.err');if(el)el.scrollIntoView({block:'center',behavior:'smooth'});return;}
