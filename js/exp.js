@@ -222,7 +222,7 @@ route('/expenses/new',function(){if(!M.state.rq)M.state.rq=rqBlank();const f=M.s
       +'<div class="total"><span>Total</span><span class="num" id="rq-total">'+money(f.lines.reduce(function(s,l){return s+(+l.amount||0);},0))+'</span></div><div id="rq-pol"></div>'
       +(webAsksJust(f)?'<div class="card" style="margin-top:12px">'+field('Policy justification',textarea('rq-just',f.just||'','Why is this above the policy limit?'),{req:true})+'</div>':'');}
   else{const a=f.adv,types=advTypeList();
-    html+='<div class="card" style="margin-top:12px">'+field('Advance Type',select('av-sub',types.indexOf(a.sub)>=0||!a.sub?types:[a.sub].concat(types),a.sub),{req:true})
+    html+='<div class="card" style="margin-top:12px">'+field('Expense Category',select('av-sub',types.indexOf(a.sub)>=0||!a.sub?types:[a.sub].concat(types),a.sub),{req:true})
      +field('Title',input('av-title',a.title||'',{ph:'e.g. Pune client visits'}),{req:true})
      +field('Requested Amount (INR ₹)',input('av-amt',a.amount,{type:'number',mode:'decimal',ph:'0'}),{req:true})
      +field('Required By Date',input('av-req',a.requiredBy,{type:'date',min:XTODAY()}),{req:true})
