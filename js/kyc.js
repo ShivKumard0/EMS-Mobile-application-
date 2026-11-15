@@ -90,7 +90,7 @@ route('/kyc',function(){const p=me(),k=kycRec(p);if(!kycNeeded(p)&&!k)return nul
   }
   const foot=s.step===1?'<button class="btn" data-act="kyNext">Proceed to next step</button>':'<div class="btns"><button class="btn" data-act="kySubmit">Submit KYC</button><button class="btn sec" data-act="kyBack">Back</button></div>';
   return {title:'Complete your KYC',up:'#/home',html:html,foot:foot,end:KYC_RESET_BTN,after:function(){
-    MAtt.thumbs();kySuggest();
+    MAtt.thumbs();kySuggest();kyCityFill();
     const pan=document.getElementById('ky-pan');if(pan){pan.setAttribute('maxlength','10');pan.setAttribute('autocapitalize','characters');pan.addEventListener('input',function(){const c=pan.selectionStart;pan.value=pan.value.toUpperCase();try{pan.setSelectionRange(c,c);}catch(e){}});}
     const nm=document.getElementById('ky-name');if(nm){nm.setAttribute('maxlength','26');nm.setAttribute('autocapitalize','characters');}
     const ad=document.getElementById('ky-aad');if(ad){ad.setAttribute('maxlength','14');ad.addEventListener('input',function(){const v=kyAadFmt(ad.value);if(v!==ad.value)ad.value=v;});}
@@ -154,23 +154,21 @@ function kycDone(p,k){const f=k.fields||{},d=k.docs||{};
    +'<div class="cap" style="text-align:center;margin-top:14px">Submitted on '+E(k.submitted?k.submitted.date+' at '+k.submitted.time:'')+'</div>';
   return {title:'Your KYC',up:'#/home',html:html,end:KYC_RESET_BTN,after:function(){MAtt.thumbs();}};}
 
-/* Suggestions: tapping a typed field opens a short list of realistic values; tapping one fills the field.
-   (PAN suggestions match the PAN on the employee's profile.) */
-const KYC_SUG={
-  'ky-name':['KABIR JOSHI','KABIR S JOSHI','KABIR SANJAY JOSHI'],
-  'ky-pan':['BXKPJ4827Q','BXKPJ6153Q'],
-  'ky-aad':['4829 1736 5022','7354 6218 9042'],
-  'ky-occ':['Sales Executive','Salaried – private sector','Sales and marketing'],
-  'ky-a1':['14, 2nd Cross','Flat 302, Lakeview Residency','22, Shivaji Nagar'],
-  'ky-a2':['HSR Layout Sector 3','Varthur Road, Whitefield','Near Shivaji Nagar Bus Stand'],
-  'ky-a3':['Opposite BDA Complex','Near Agara Lake','Behind Fergusson College'],
-  'ky-city':['Bengaluru','Pune','Mumbai'],
-  'ky-pin':['560102','560066','411005']};
-function kySuggest(){Object.keys(KYC_SUG).forEach(function(id){const inp=document.getElementById(id);if(!inp)return;const box=inp.closest('.inp'),fg=inp.closest('.fg');if(!box||!fg)return;
+/* Suggestions: tapping a typed field opens the person's OWN details to pick (product owner, 15 Nov 2026: "show the data
+   in realistic format, not randomly"): one identity - the name as on the PAN, the PAN on the profile, one Aadhaar
+   number, the job title - and the addresses on the employee record (current and permanent), never invented ones. */
+const KYC_ID={'kabir.joshi@opendhi.in':{pan:'BXKPJ4827Q',aadhaar:'482917365022'}};
+function kycSug(p){
+  p=p||{};const h=P.hr(p)||{},id=KYC_ID[p.email]||{},cur=kycAddr(h.addr),per=kycAddr(h.perm);
+  const u=function(a){return a.filter(function(x,i){return x&&a.indexOf(x)===i;});};
+  return {'ky-name':u([String(p.name||'').toUpperCase()]),'ky-pan':u([id.pan]),'ky-aad':u([id.aadhaar?kyAadFmt(id.aadhaar):'']),'ky-occ':u([p.jobTitle]),
+    'ky-a1':u([cur.addr1,per.addr1]),'ky-a2':u([cur.addr2,per.addr2]),'ky-city':u([cur.city,per.city]),'ky-pin':u([cur.pincode,per.pincode])};
+}
+function kySuggest(){const SG=kycSug(me());Object.keys(SG).forEach(function(id){if(!SG[id].length)return;const inp=document.getElementById(id);if(!inp)return;const box=inp.closest('.inp'),fg=inp.closest('.fg');if(!box||!fg)return;
   let list=null,hideT=null;
   const hide=function(){if(list){list.remove();list=null;}};
   const show=function(){clearTimeout(hideT);const q=inp.value.trim().toLowerCase();
-    const opts=KYC_SUG[id].filter(function(o){const v=o.toLowerCase();return !q||(v.indexOf(q)>=0&&v!==q);});
+    const opts=SG[id].filter(function(o){const v=o.toLowerCase();return !q||(v.indexOf(q)>=0&&v!==q);});
     if(!opts.length){hide();return;}
     if(!list){list=document.createElement('div');list.className='sug';fg.classList.add('has-sug');box.insertAdjacentElement('afterend',list);}
     list.innerHTML='<div class="sug-h">Suggestions</div>'+opts.map(function(o){return '<button type="button" class="sug-i">'+E(o)+'</button>';}).join('');
@@ -179,6 +177,51 @@ function kySuggest(){Object.keys(KYC_SUG).forEach(function(id){const inp=documen
     setTimeout(function(){if(list&&list.scrollIntoView)list.scrollIntoView({block:'nearest'});},60);};
   inp.addEventListener('focus',show);inp.addEventListener('input',show);
   inp.addEventListener('blur',function(){hideT=setTimeout(hide,180);});});}
+
+/* City → State and Pincode (product owner, 15 Nov 2026: "when he fills the city the state and pincode should be auto
+   filled"). The state is the city's; the pincode is the area's when the address lines name a known area of that city
+   (HSR Layout → 560102), else the city's main pincode. A pincode the person typed himself is kept when it belongs to
+   the same region. Both stay editable. */
+const KYC_CITY={'Bengaluru':['Karnataka','560001'],'Mysuru':['Karnataka','570001'],'Mangaluru':['Karnataka','575001'],'Hubballi':['Karnataka','580020'],'Belagavi':['Karnataka','590001'],'Udupi':['Karnataka','576101'],
+  'Mumbai':['Maharashtra','400001'],'Navi Mumbai':['Maharashtra','400703'],'Thane':['Maharashtra','400601'],'Pune':['Maharashtra','411001'],'Nagpur':['Maharashtra','440001'],'Nashik':['Maharashtra','422001'],'Aurangabad':['Maharashtra','431001'],
+  'Hyderabad':['Telangana','500001'],'Warangal':['Telangana','506002'],'Chennai':['Tamil Nadu','600001'],'Coimbatore':['Tamil Nadu','641001'],'Madurai':['Tamil Nadu','625001'],'Tiruchirappalli':['Tamil Nadu','620001'],
+  'Delhi':['Delhi','110001'],'Gurugram':['Haryana','122001'],'Faridabad':['Haryana','121001'],'Noida':['Uttar Pradesh','201301'],'Ghaziabad':['Uttar Pradesh','201001'],'Lucknow':['Uttar Pradesh','226001'],'Kanpur':['Uttar Pradesh','208001'],
+  'Varanasi':['Uttar Pradesh','221001'],'Agra':['Uttar Pradesh','282001'],'Kolkata':['West Bengal','700001'],'Howrah':['West Bengal','711101'],'Ahmedabad':['Gujarat','380001'],'Surat':['Gujarat','395003'],'Vadodara':['Gujarat','390001'],
+  'Rajkot':['Gujarat','360001'],'Jaipur':['Rajasthan','302001'],'Jodhpur':['Rajasthan','342001'],'Udaipur':['Rajasthan','313001'],'Kochi':['Kerala','682001'],'Thiruvananthapuram':['Kerala','695001'],'Kozhikode':['Kerala','673001'],
+  'Indore':['Madhya Pradesh','452001'],'Bhopal':['Madhya Pradesh','462001'],'Chandigarh':['Chandigarh','160017'],'Ludhiana':['Punjab','141001'],'Amritsar':['Punjab','143001'],'Mohali':['Punjab','160055'],
+  'Visakhapatnam':['Andhra Pradesh','530001'],'Vijayawada':['Andhra Pradesh','520001'],'Bhubaneswar':['Odisha','751001'],'Patna':['Bihar','800001'],'Ranchi':['Jharkhand','834001'],'Raipur':['Chhattisgarh','492001'],
+  'Guwahati':['Assam','781001'],'Dehradun':['Uttarakhand','248001'],'Shimla':['Himachal Pradesh','171001'],'Srinagar':['Jammu and Kashmir','190001'],'Jammu':['Jammu and Kashmir','180001'],'Panaji':['Goa','403001'],
+  'Margao':['Goa','403601'],'Puducherry':['Puducherry','605001']};
+const KYC_CITY_ALIAS={'bangalore':'Bengaluru','bengalooru':'Bengaluru','mysore':'Mysuru','mangalore':'Mangaluru','hubli':'Hubballi','belgaum':'Belagavi','bombay':'Mumbai','poona':'Pune','madras':'Chennai',
+  'calcutta':'Kolkata','gurgaon':'Gurugram','new delhi':'Delhi','trivandrum':'Thiruvananthapuram','cochin':'Kochi','ernakulam':'Kochi','calicut':'Kozhikode','vizag':'Visakhapatnam','baroda':'Vadodara',
+  'trichy':'Tiruchirappalli','pondicherry':'Puducherry','goa':'Panaji','secunderabad':'Hyderabad'};
+const KYC_AREA=[['Bengaluru','HSR Layout','560102'],['Bengaluru','Koramangala','560034'],['Bengaluru','Whitefield','560066'],['Bengaluru','Indiranagar','560038'],['Bengaluru','Jayanagar','560041'],
+  ['Bengaluru','Electronic City','560100'],['Bengaluru','Marathahalli','560037'],['Bengaluru','BTM Layout','560076'],['Bengaluru','Malleshwaram','560003'],['Bengaluru','Hebbal','560024'],
+  ['Pune','Shivaji Nagar','411005'],['Pune','Baner','411045'],['Pune','Hinjewadi','411057'],['Pune','Kothrud','411038'],['Pune','Viman Nagar','411014'],['Pune','Hadapsar','411028'],
+  ['Hyderabad','Banjara Hills','500034'],['Hyderabad','Jubilee Hills','500033'],['Hyderabad','Gachibowli','500032'],['Hyderabad','Madhapur','500081'],['Hyderabad','Kondapur','500084'],
+  ['Mumbai','Andheri','400053'],['Mumbai','Bandra','400050'],['Mumbai','Powai','400076'],['Mumbai','Goregaon','400063'],['Mumbai','Juhu','400049'],['Mumbai','Malad','400064'],['Mumbai','Lower Parel','400013'],
+  ['Delhi','Connaught Place','110001'],['Delhi','Saket','110017'],['Delhi','Dwarka','110075'],['Chennai','T. Nagar','600017'],['Chennai','Adyar','600020'],['Chennai','Velachery','600042']];
+function kyCity(v){const n=String(v||'').trim().toLowerCase().replace(/\s+/g,' ');if(!n)return null;
+  const c=KYC_CITY_ALIAS[n]||Object.keys(KYC_CITY).find(function(k){return k.toLowerCase()===n;});
+  return c?{city:c,state:KYC_CITY[c][0],pin:KYC_CITY[c][1]}:null;}
+function kyAreaPin(city,lines){const t=lines.join(' ').toLowerCase();const a=KYC_AREA.find(function(x){return x[0]===city&&t.indexOf(x[1].toLowerCase())>=0;});return a?a[2]:'';}
+function kyCityFill(){
+  const city=document.getElementById('ky-city');if(!city)return;
+  const st=document.getElementById('ky-state'),pn=document.getElementById('ky-pin');
+  const note=function(on){if(!pn)return;const fg=pn.closest('.fg');if(!fg)return;let h=fg.querySelector('.help.ky-autonote');
+    if(!on){if(h)h.remove();return;}if(!h){h=document.createElement('div');h.className='help ky-autonote';fg.appendChild(h);}h.textContent='Filled in from the city · change it if your area’s pincode is different';};
+  const fill=function(){
+    const m=kyCity(city.value);if(!m)return;kyRead();const s=M.state.ky,f=s.f;
+    city.value=m.city;f.city=m.city;markErr('ky-city',false);
+    if(st){st.value=m.state;f.state=m.state;markErr('ky-state',false);const b=st.closest('.inp');if(b)b.classList.add('auto');}
+    const pin=kyAreaPin(m.city,[f.addr1,f.addr2,f.addr3])||m.pin;
+    if(pn&&(!f.pincode||s.autoPin||String(f.pincode).slice(0,2)!==pin.slice(0,2))){pn.value=pin;f.pincode=pin;s.autoPin=true;markErr('ky-pin',false);const b=pn.closest('.inp');if(b)b.classList.add('auto');note(true);}
+  };
+  city.addEventListener('change',fill);
+  city.addEventListener('input',function(){if(kyCity(city.value))fill();});
+  if(pn)pn.addEventListener('input',function(){const s=M.state.ky;if(s)s.autoPin=false;const b=pn.closest('.inp');if(b)b.classList.remove('auto');note(false);});
+  if(st)st.addEventListener('change',function(){const b=st.closest('.inp');if(b)b.classList.remove('auto');});
+}
 
 /* Reset (refresh icon next to the bell, on the KYC page): clears the KYC so it can be filled in again. */
 const KYC_RESET_BTN='<button class="ib" data-act="kyReset" aria-label="Clear KYC and start again">'+ic('refresh',22)+'</button>';
