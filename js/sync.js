@@ -80,6 +80,7 @@ const MSync=(function(){
   }
   function wallets(d){
     const db=MStore.db;db.wallets=db.wallets||{};db.wallets[d.eid]=d;
+    cardState(d);
     db.cards.filter(function(c){return c.employeeEid===d.eid;}).forEach(function(c){
       const wc=(d.cards||[]).find(function(x){return x.id===c.id;})||(d.cards||[])[0];if(!wc)return;
       c.wallets=wc.wallets.map(function(code){
@@ -87,16 +88,18 @@ const MSync=(function(){
         return Object.assign({},old,{code:code,name:x.name||old.name||code,balance:x.available||0,loads:x.loaded||0,spent:x.spent||0,credits:x.refunded||0});
       });
     });
-    cardState(d);
   }
   /* Each card as the web has it - status, hold, an open replacement (14 Nov 2026). A card with an action still on its way
      keeps what the phone shows until the web answers. */
   function cardState(d){
     const db=MStore.db,pend=S().pend||{};
     (d.state||[]).forEach(function(x){
-      const c=db.cards.find(function(y){return y.id===x.id;});if(!c)return;
+      let c=db.cards.find(function(y){return y.id===x.id;});
+      /* a card the web issued after this copy was made (a new card once the old one is Disabled, 15 Nov 2026) */
+      if(!c){c={id:x.id,employeeEid:d.eid,last4:x.last4||'',type:x.type||'Virtual',issueDate:'',status:x.status,currency:'INR',provider:'rbl',ref:x.key||'',wallets:[]};db.cards.push(c);}
       if(Object.keys(pend).some(function(k){return pend[k].wid==='card:'+x.id;}))return;
       c.status=x.status;c.hold=x.hold||null;c.repl=x.repl||null;c.forms=x.forms||[];if(x.type)c.type=x.type;if(x.key)c.ref=x.key;
+      c.word=x.word||'';c.newReq=x.newReq||null;if(x.last4)c.last4=x.last4;
       delete c.replacement;
     });
   }
@@ -173,7 +176,9 @@ const MSync=(function(){
     }
     if(/^card\./.test(it.type)){
       if(okd)say(it.type==='card.hold'?'Card on hold':it.type==='card.releaseHold'?(res.released?'Hold released':'Release requested · a card administrator reviews it')
-        :it.type==='card.reportLost'?'Card reported · block requested from the bank':'Replacement '+(res.repl||'')+' requested'+(res.at?' · with '+res.at:''));
+        :it.type==='card.reportLost'?'Card reported · your company admin blocks it'
+        :it.type==='card.newRequest'?'New card '+(res.req||'')+' requested'+(res.at?' · with '+res.at:'')
+        :'Replacement '+(res.repl||'')+' requested'+(res.at?' · with '+res.at:''));
       else say('Not done: '+(res.error||'not accepted by the web app'));
       /* the card reads as the web has it again */
       Object.keys(MStore.db.wallets||{}).forEach(function(k){cardState(MStore.db.wallets[k]);});

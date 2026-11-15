@@ -165,7 +165,9 @@ function rqBlank(){return {type:'claim',forWho:'self',forEid:'',lines:[blankLine
 M.acts.rqNew=function(){M.state.rq=rqBlank();go('#/expenses/new');};
 M.acts.rqNewAdv=function(){M.state.rq=rqBlank();M.state.rq.type='advance';go('#/expenses/new');};
 function myOpenAdvances(eid){return DB().advances.filter(function(a){return a.employeeEid===eid&&a.status==='Approved'&&advIssued(a)&&advBalance(a)>0;});}
-function myCards(){const p=me();return p?DB().cards.filter(function(c){return c.employeeEid===p.eid;}):[];}
+function myCards(){const p=me();if(!p)return [];const end=['Not Issued','Expired','Replaced','Closed','Blocked'];
+  return DB().cards.filter(function(c){return c.employeeEid===p.eid;}).map(function(c,i){return [c,i];})
+    .sort(function(a,b){return (end.indexOf(a[0].status)>=0)-(end.indexOf(b[0].status)>=0)||a[1]-b[1];}).map(function(x){return x[0];});}
 /* The claim is named after its items, as on the web app: the first item's title, "+ n more" when there are several. */
 function claimTitle(lines){const t=lines.map(function(l){return String(l.title||'').trim();}).filter(Boolean);return t.length?t[0]+(t.length>1?' + '+(t.length-1)+' more':''):((lines[0]||{}).cat||'Expense claim');}
 /* The web app asks for an Expense Proof on every item; without the sync, the phone keeps its own rule (paid by me). */
@@ -486,14 +488,18 @@ route('/cards',function(){const cards=myCards(),p=me();
   const ended=CARD_ENDED.indexOf(c.status)>=0,h=c.hold,temp=!!h&&h.type==='Temporary',rep=!!h&&!temp;
   const actions=[[!h?'Hold card':temp&&!h.release?'Release hold':temp?'Release asked':'On hold','lock',ended?'':!h?'cardHold':temp&&!h.release?'cardRelease':''],
     ['Lost or stolen','dispute',ended||rep?'':'cardLost'],
-    ['Replace','refresh',c.repl||['Not Issued','Issuance Pending','Replaced','Closed'].indexOf(c.status)>=0?'':'cardReplace'],['Details','info','cardDetails']];
-  const cst=ended?c.status:temp?'On hold':rep?'Reported '+String(h.reason||'').toLowerCase():c.status;
+    c.status==='Closed'?['New card','plus',c.newReq?'':'cardNew']
+      :['Replace','refresh',c.repl||rep||c.status==='Blocked'||['Not Issued','Issuance Pending','Replaced'].indexOf(c.status)>=0?'':'cardReplace'],['Details','info','cardDetails']];
+  const cst=c.word||(ended?c.status:h?'On Hold':c.status);
   let html=cardVisual(c)
    +'<div class="vc-foot"><div class="row-m"><div class="row-t">'+E(cardProg(c))+'</div><div class="row-s">'+E(c.ref)+' · '+E(c.type||'Virtual')+' · <span class="vc-hint">Tap to show number</span></div></div>'+badge(cst,cst==='Active'?'ok':tone(cst))+'</div>'
    +'<div class="shorts" style="grid-template-columns:repeat(4,1fr);margin-top:12px">'+actions.map(function(a){return '<button class="short" style="font-size:12px;padding:12px 4px 10px'+(a[2]?'':';opacity:.4')+'"'+(a[2]?' data-act="'+a[2]+'"':' disabled')+'><span class="ico">'+ic(a[1],18)+'</span>'+a[0]+'</button>';}).join('')+'</div>';
   if(temp)html+='<div class="callout warn">Your card is on hold: no new loads reach it until the hold is released.'+(h.release?' You asked to release it; a card administrator reviews the request.':'')+'</div>';
-  if(rep)html+='<div class="callout bad">You reported this card '+E(String(h.reason||'').toLowerCase())+'. It stays on hold and a block was requested from the bank. Call the bank\'s 24x7 helpline too.'+(c.repl?'':' Ask for a new card with Replace.')+'</div>';
-  if(ended)html+='<div class="callout bad">This card is '+E(String(c.status).toLowerCase())+'.</div>';
+  if(rep&&!ended)html+='<div class="callout bad">You reported this card '+E(String(h.reason||'').toLowerCase())+'. It stays on hold until your company admin blocks it. Call the bank\'s 24x7 helpline too.</div>';
+  if(c.status==='Blocked')html+='<div class="callout bad">Your card is blocked. Your company admin disables it next; then you can ask for a new card.</div>';
+  else if(c.status==='Closed')html+='<div class="callout bad">This card is disabled.'+(c.newReq?'':' Ask for a new card with New card.')+'</div>';
+  else if(ended)html+='<div class="callout bad">This card is '+E(String(c.status).toLowerCase())+'.</div>';
+  if(c.newReq)html+='<div class="callout info">New card '+E(c.newReq.key||'')+' · '+E(c.newReq.status==='Awaiting Approval'?'waiting for approval':c.newReq.status)+(c.newReq.at?' with '+E(c.newReq.at):'')+'.</div>';
   if(c.repl)html+='<div class="callout info">Replacement '+E(c.repl.key||'')+' · '+E(c.repl.status==='Awaiting Approval'?'waiting for approval':c.repl.status)+(c.repl.at?' with '+E(c.repl.at):'')+'. Your current card is unchanged until the new one is issued.</div>';
   html+='<div class="h2">Wallet balances</div><div class="card p0"><div class="row"><div class="row-m"><div class="lbl">Total available</div><div class="b num" style="font-size:24px;line-height:30px">'+money(av)+'</div></div></div>'
    +c.wallets.map(function(w){const pct=w.loads?Math.round(w.balance/(w.loads+(w.credits||0))*100):0;return '<div class="row tap" data-act="txWallet" data-w="'+w.code+'"><span class="ico">'+ic(WICON[w.code]||'wallet')+'</span><div class="row-m"><div class="row-t">'+E(w.name)+'</div><div class="row-s">Loaded '+money(w.loads)+' · spent '+money(w.spent)+(w.credits?' · refunds '+money(w.credits):'')+'</div><div class="bar5" style="margin:6px 0 0"><i style="width:'+pct+'%"></i></div></div><div class="row-r"><span class="b num">'+money(w.balance)+'</span></div></div>';}).join('')+'</div>'
@@ -517,19 +523,19 @@ function cardSend(c,type,payload,apply,msg){
 function cardNeed(id,on){markErr(id,on);if(on)toast('Fill in the fields marked *');return on;}
 M.acts.cardHold=function(){const c=myCards()[0];
   sheet('Put your card on hold',field('Reason',textarea('ch-r','','Why the card is held'),{req:true})
-    +'<div class="help" style="margin-top:6px">No new loads reach the card while it is on hold. Releasing the hold is reviewed by a card administrator.</div><button class="btn" style="margin-top:14px" id="ch-ok">Hold card</button>',
+    +'<div class="help" style="margin-top:6px">No new loads reach the card while it is on hold. You can release the hold yourself at any time.</div><button class="btn" style="margin-top:14px" id="ch-ok">Hold card</button>',
     {after:function(w){w.querySelector('#ch-ok').onclick=function(){const r=val('ch-r');if(cardNeed('ch-r',!r))return;
-      cardSend(c,'card.hold',{reason:r},function(){c.hold={type:'Temporary',reason:r,release:false};},'Hold sent to the web app');};}});};
+      cardSend(c,'card.hold',{reason:r},function(){c.hold={type:'Temporary',reason:r,release:false};c.word='On Hold';},'Hold sent to the web app');};}});};
 M.acts.cardRelease=function(){const c=myCards()[0];
   sheet('Release the hold',field('Reason',textarea('cr-r','','Why the hold can end'),{req:true})
-    +'<div class="help" style="margin-top:6px">A card administrator reviews the request; the hold stays until then.</div><button class="btn" style="margin-top:14px" id="cr-ok">Ask to release</button>',
+    +'<div class="help" style="margin-top:6px">The hold ends at once and your card works again.</div><button class="btn" style="margin-top:14px" id="cr-ok">Release hold</button>',
     {after:function(w){w.querySelector('#cr-ok').onclick=function(){const r=val('cr-r');if(cardNeed('cr-r',!r))return;
-      cardSend(c,'card.releaseHold',{reason:r},function(){if(c.hold)c.hold.release=true;},'Release request sent to the web app');};}});};
+      cardSend(c,'card.releaseHold',{reason:r},function(){c.hold=null;c.word='Active';},'Release sent to the web app');};}});};
 M.acts.cardLost=function(){const c=myCards()[0],L=cardLists();
   sheet('Report card •••• '+c.last4+' lost or stolen',field('What happened',select('cl-r',L.lost,'',{ph:'Select'}),{req:true})+field('Details',textarea('cl-n','','When and where, if known'))
-    +'<div class="help" style="margin-top:6px">Your card goes on hold at once and a block is requested from the bank. Call the bank\'s 24x7 helpline too.</div><button class="btn" style="margin-top:14px" id="cl-ok">Report card</button>',
+    +'<div class="help" style="margin-top:6px">Your card goes on hold at once. Your company admin blocks it, then disables it; after that you can ask for a new card. Call the bank\'s 24x7 helpline too.</div><button class="btn" style="margin-top:14px" id="cl-ok">Report card</button>',
     {after:function(w){w.querySelector('#cl-ok').onclick=function(){const r=val('cl-r');if(cardNeed('cl-r',!r))return;
-      cardSend(c,'card.reportLost',{reason:r,note:val('cl-n')},function(){c.hold={type:'Safety report',reason:r,release:false};},'Report sent to the web app');};}});};
+      cardSend(c,'card.reportLost',{reason:r,note:val('cl-n')},function(){c.hold={type:'Safety report',reason:r,release:false};c.word='On Hold';},'Report sent to the web app');};}});};
 M.acts.cardReplace=function(){const c=myCards()[0],L=cardLists(),forms=c.forms&&c.forms.length?c.forms:[c.type||'Virtual'];
   sheet('Request a replacement',field('Reason',select('rp-r',L.repl,'',{ph:'Select'}),{req:true})
     +'<div id="rp-pw" style="display:none">'+field('Details',input('rp-p','',{ph:'Why the card is replaced'}),{req:true})+'</div>'
@@ -547,6 +553,24 @@ M.acts.cardReplace=function(){const c=myCards()[0],L=cardLists(),forms=c.forms&&
         const d={reason:val('rp-r'),purpose:val('rp-p'),cardType:val('rp-t'),deliveryMode:phys?val('rp-d'):'',deliveryText:phys&&val('rp-d')==='Other address'?val('rp-x'):'',comments:val('rp-c')};
         if(cardNeed('rp-r',!d.reason)||cardNeed('rp-p',d.reason==='Other'&&!d.purpose)||cardNeed('rp-d',phys&&!d.deliveryMode)||cardNeed('rp-x',d.deliveryMode==='Other address'&&!d.deliveryText))return;
         cardSend(c,'card.replace',d,function(){c.repl={key:'',status:'Sending',at:''};},'Replacement request sent to the web app');};}});};
+M.acts.cardNew=function(){const c=myCards().find(function(x){return x.status==='Closed';})||myCards()[0],L=MStore.db.lists||{},forms=c.forms&&c.forms.length?c.forms:[c.type||'Virtual'];
+  const reasons=L.cardReqReasons&&L.cardReqReasons.length?L.cardReqReasons:['Role requirement','Frequent business travel','Client and vendor spend','Benefit programme enrolment','Other'],dl=cardLists().deliv;
+  sheet('Ask for a new card',field('Reason',select('cn-r',reasons,'',{ph:'Select'}),{req:true})
+    +'<div id="cn-pw" style="display:none">'+field('Business purpose',input('cn-p','',{ph:'Why you need the card'}),{req:true})+'</div>'
+    +field('Card type',select('cn-t',forms,forms.indexOf(c.type)>=0?c.type:forms[0]),{req:true})
+    +'<div id="cn-dw" style="display:none">'+field('Delivery address',select('cn-d',dl,'',{ph:'Select'}),{req:true})
+      +'<div id="cn-xw" style="display:none">'+field('Other address',textarea('cn-x','','Full address with PIN code'),{req:true})+'</div></div>'
+    +field('Additional comments',textarea('cn-c',''))
+    +'<div class="help" style="margin-top:6px">It goes for approval: your manager, then Finance. Your new card is issued once it is approved.</div><button class="btn" style="margin-top:14px" id="cn-ok">Request new card</button>',
+    {after:function(w){
+      const sync=function(){w.querySelector('#cn-pw').style.display=val('cn-r')==='Other'?'':'none';const phys=val('cn-t')==='Physical';
+        w.querySelector('#cn-dw').style.display=phys?'':'none';w.querySelector('#cn-xw').style.display=phys&&val('cn-d')==='Other address'?'':'none';};
+      ['cn-r','cn-t','cn-d'].forEach(function(id){w.querySelector('#'+id).onchange=sync;});sync();
+      w.querySelector('#cn-ok').onclick=function(){
+        const phys=val('cn-t')==='Physical';
+        const d={reason:val('cn-r'),purpose:val('cn-p'),cardType:val('cn-t'),deliveryMode:phys?val('cn-d'):'',deliveryText:phys&&val('cn-d')==='Other address'?val('cn-x'):'',comments:val('cn-c')};
+        if(cardNeed('cn-r',!d.reason)||cardNeed('cn-p',d.reason==='Other'&&!d.purpose)||cardNeed('cn-d',phys&&!d.deliveryMode)||cardNeed('cn-x',d.deliveryMode==='Other address'&&!d.deliveryText))return;
+        cardSend(c,'card.newRequest',d,function(){c.newReq={key:'',status:'Sending',at:''};},'Card request sent to the web app');};}});};
 M.acts.cardDetails=function(){const c=myCards()[0],p=me();sheet('Card details',kv('Card',E(c.ref))+kv('Number','•••• '+E(c.last4))+kv('Type',E(c.type||'Virtual'))+kv('Name on card',E(String(p.name).toUpperCase()))+kv('Issued',E(MFmt.date(c.issueDate)))+kv('Status',badge(c.status==='Blocked'?'Blocked':c.hold?'On hold':c.status,c.status==='Active'&&!c.hold?'ok':'warn'))+(c.replacement?kv('Replacement',badge(c.replacement,'warn')):'')+kv('Wallets',E(c.wallets.map(function(w){return w.name;}).join(', '))));};
 route('/cards/payments',function(){const c=myCards()[0];if(!c)return null;const w=M.state.txW||'All';const tx=cardTxns(c).filter(function(t){return w==='All'||t.wallet===w;});
   const html='<div class="chips">'+[['All','All']].concat(c.wallets.map(function(x){return [x.code,x.name.replace(' Expense','')];})).map(function(x){return '<button class="pill'+(w===x[0]?' on':'')+'" data-act="txW" data-w="'+x[0]+'">'+E(x[1])+'</button>';}).join('')+'</div>'
