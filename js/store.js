@@ -27,13 +27,18 @@ const MStore=(function(){
   function load(){
     try{const x=JSON.parse(localStorage.getItem(KEY)||'null');if(x&&x.version===window.M_SEED.version&&x.hrVersion===window.M_HR.version)db=x;}catch(e){db=null;}
     if(!db){db=fresh();db.hrVersion=window.M_HR.version;save(true);}
-    /* Every "Nova" is Opendhi (product owner, 14 Nov 2026): the company, the card (OpenDhi x RBL), funding accounts,
+    /* Every "Nova" is Opendhi (product owner, 14 Nov 2026): the company, the card, funding accounts,
        codes and e-mail addresses (@opendhi.in). A copy kept on this phone from before is renamed in place, so nothing
        done on the phone is lost. */
     try{const t=JSON.stringify(db);if(/nova/i.test(t.replace(/adt-mobile-nova/g,''))){
-      db=JSON.parse(t.replace(/\b([Aa]) Nova Multi Wallet Card/g,'$1n OpenDhi x RBL').replace(/Nova Multi Wallet Card|NOVA X RBL Multiwallet Card/g,'OpenDhi x RBL')
-        .replace(/\bNova card\b/g,'OpenDhi x RBL card').replace(/Nova Retail Pvt Ltd|Nova Retail/g,'Opendhi').replace(/@novaretail\.in/gi,'@opendhi.in')
+      db=JSON.parse(t.replace(/\b([Aa]) Nova Multi Wallet Card/g,'$1n OpenDhi Multi+ Corporate Card').replace(/Nova Multi Wallet Card|NOVA X RBL Multiwallet Card/g,'OpenDhi Multi+ Corporate Card')
+        .replace(/\bNova card\b/g,'OpenDhi Multi+ Corporate Card').replace(/Nova Retail Pvt Ltd|Nova Retail/g,'Opendhi').replace(/@novaretail\.in/gi,'@opendhi.in')
         .replace(/\bNOVA-/g,'OPENDHI-').replace(/\bNova\b/g,'Opendhi'));save(true);
+    }}catch(e){}
+    /* The card reads OpenDhi Multi+ Corporate Card (product owner, 16 Nov 2026; was OpenDhi x RBL): a copy kept on
+       this phone is renamed in place. */
+    try{const t=JSON.stringify(db);if(/OpenDhi x RBL/.test(t)){
+      db=JSON.parse(t.replace(/OpenDhi x RBL card\b/g,'OpenDhi Multi+ Corporate Card').replace(/OpenDhi x RBL(?! Bank)/g,'OpenDhi Multi+ Corporate Card'));save(true);
     }}catch(e){}
   }
   function save(quiet){try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}if(!quiet)subs.forEach(function(f){try{f();}catch(e){}});}
