@@ -2,9 +2,17 @@
    Records, statuses and approval routes follow the web app (Default - Manager then Finance; card loads by the Card approver). */
 /* Sub Category → Expense Types, and the Advance Types: the web app's own lists (product owner, 14 Nov 2026). The copy
    below is what the web app has today; with the sync on (js/sync.js) the web app's current lists are used. */
-const WEB_SUBS={'Travel Reimbursement':['One Way','Two Way','Intercity Travel - Air','Intercity Travel - Train','Intercity Travel - Bus'],'Meal Allowance':['Breakfast','Lunch','Dinner'],
-  'Accommodation':['Accommodation'],'Fuel Reimbursement':['One Way','Two Way','Bike','Car'],'Team Outing':['Monthly','Quarterly','Annual'],'Office Events':['Monthly','Annual','Festival'],
-  'Office Stationery':['Monthly','Annual','Festival'],'Telephone & Internet':['Mobile','Broadband'],'Books & Learning':['Books','Course','Certification']};
+const WEB_SUBS={'Travel & Transport':['Flight','Train','Bus','Cab/Taxi','Auto-rickshaw','Metro/Local Train','Vehicle Rental','One Way','Two Way','Intercity Travel - Air','Intercity Travel - Train','Intercity Travel - Bus'],
+  'Meals & Refreshments':['Breakfast','Lunch','Dinner','Snacks & Beverages','Catering'],
+  'Accommodation':['Accommodation','Hotel','Guest House','Serviced Apartment'],
+  'Fuel & Vehicle Expenses':['Petrol','Diesel','EV Charging','Mileage Claim - Car','Mileage Claim - Two-wheeler','Parking','Toll Charges','One Way','Two Way','Bike','Car'],
+  'Team Outing':['Monthly','Quarterly','Annual'],'Office Events':['Monthly','Annual','Festival'],
+  'Office Supplies & Services':['Stationery','Printing & Photocopying','Courier & Postage','Office Consumables','Monthly','Annual','Festival'],
+  'Telephone & Internet':['Mobile','Broadband','Mobile Bill','Broadband Bill','Mobile Data Pack','International Roaming'],
+  'Learning & Development':['Books & E-books','Training & Courses','Certification & Examination Fees','Conference & Seminar Fees','Professional Membership','Books','Course','Certification'],
+  'IT Equipment & Software':['Computer Accessories','Devices & Equipment','Software Licences','Software Subscriptions','Equipment Repairs'],
+  'Meetings & Events':['Venue Hire','Event Management Charges','Team Activity Fees','Event Materials & Decorations'],
+  'Other Approved Expenses':['Other - Specify']};
 const WEB_ADV=['Travel Advance','Business Expense Advance','Employee Expense Advance'];
 function subsMap(){const l=MStore.db.lists;return l&&l.subcats&&Object.keys(l.subcats).length?l.subcats:WEB_SUBS;}
 function catList(){const m=subsMap(),l=MStore.db.lists;return (l&&l.cats?l.cats:Object.keys(WEB_SUBS)).filter(function(c){return m[c];});}
@@ -175,9 +183,9 @@ function needProof(l){return MSync.on||l.paidBy==='Employee';}
 function policyFor(f,ownerE){if(f.type!=='claim'||MSync.on)return null;const cat=(f.lines[0]||{}).cat;if(!cat)return null;const p=P.byEid(ownerE)||me();
   const ls=f.lines.filter(function(l){return l.cat===cat;}),tot=ls.reduce(function(s,l){return s+(+l.amount||0);},0);
   const month=XTODAY().slice(0,7),prior=DB().expenses.filter(function(r){return r.employeeEid===p.eid&&r.category===cat&&['Awaiting Approval','Approved','Follow-Up'].indexOf(r.status)>=0&&(r.appliedOn||'').slice(0,7)===month&&r.ref!==f.editRef;}).reduce(function(s,r){return s+reqTotal(r);},0);
-  if(cat==='Travel Reimbursement'){const lim=p.dept==='Sales'?5000:3000;return {name:(p.dept==='Sales'?'Sales':'Local')+' travel limit',limit:lim,used:prior,now:tot,over:prior+tot-lim,per:'a month'};}
+  if(cat==='Travel & Transport'){const lim=p.dept==='Sales'?5000:3000;return {name:(p.dept==='Sales'?'Sales':'Local')+' travel limit',limit:lim,used:prior,now:tot,over:prior+tot-lim,per:'a month'};}
   if(cat==='Accommodation'){const mx=ls.reduce(function(m,l){return Math.max(m,+l.amount||0);},0);return {name:'Hotel limit',limit:4500,used:0,now:mx,over:mx-4500,per:'a night'};}
-  if(cat==='Meal Allowance'){const mx=ls.reduce(function(m,l){return Math.max(m,+l.amount||0);},0);return {name:'Meal limit',limit:1500,used:0,now:mx,over:mx-1500,per:'a meal'};}
+  if(cat==='Meals & Refreshments'){const mx=ls.reduce(function(m,l){return Math.max(m,+l.amount||0);},0);return {name:'Meal limit',limit:1500,used:0,now:mx,over:mx-1500,per:'a meal'};}
   return null;}
 function rqRead(){const f=M.state.rq;if(!f)return;const g=function(id,d){const el=document.getElementById(id);return el?el.value:d;};
   f.just=g('rq-just',f.just);
@@ -598,7 +606,7 @@ route('/t/:ref',function(pr){const t=DB().txns.find(function(x){return x.ref===p
   return {title:'Payment',up:'#/cards',tab:'more',html:html,after:function(){const f=document.getElementById('tx-file');f.addEventListener('change',function(){if(!f.files[0])return;const n={ref:t.ref,file:f.files[0].name,by:me().name,date:MStore.now().date};MStore.act('txn.receipt',t.ref,n,function(){MStore.db.notes.push(n);});render();toast('Receipt added');});}};});
 M.acts.txNote=function(el){const ref=el.getAttribute('data-ref');sheet('Add a note',field('Note',textarea('tn-t','','e.g. Team lunch with the store staff'),{req:true})+'<button class="btn" style="margin-top:14px" id="tn-ok">Save note</button>',{after:function(w){w.querySelector('#tn-ok').onclick=function(){const v=w.querySelector('#tn-t').value.trim();if(v.length<3){markErr('tn-t',true);return;}const n={ref:ref,text:v,by:me().name,date:MStore.now().date};MStore.act('txn.note',ref,n,function(){MStore.db.notes.push(n);});closeSheet();render();toast('Note saved');};}});};
 M.acts.txExpense=function(el){const t=DB().txns.find(function(x){return x.ref===el.getAttribute('data-ref');});const f=rqBlank();
-  const g={'7011':['Accommodation','Accommodation'],'4121':['Travel Reimbursement','One Way'],'7523':['Travel Reimbursement','One Way'],'5812':['Meal Allowance','Lunch'],'5814':['Meal Allowance','Breakfast'],'5541':['Fuel Reimbursement',''],'4814':['Telephone & Internet','Mobile'],'5943':['Office Stationery',''],'7338':['Office Stationery','']}[t.mcc]||['',''];
+  const g={'7011':['Accommodation','Accommodation'],'4121':['Travel & Transport','One Way'],'7523':['Travel & Transport','One Way'],'5812':['Meals & Refreshments','Lunch'],'5814':['Meals & Refreshments','Breakfast'],'5541':['Fuel & Vehicle Expenses',''],'4814':['Telephone & Internet','Mobile'],'5943':['Office Supplies & Services',''],'7338':['Office Supplies & Services','']}[t.mcc]||['',''];
   f.lines=[Object.assign(blankLine(),{title:t.reason||t.merchant,cat:g[0],type:g[1],date:t.date,merchant:t.merchant,amount:String(t.amount),paidBy:'Corporate Card',txnId:t.id,cardId:t.cardId})];M.state.rq=f;go('#/expenses/new');};
 route('/t/:ref/dispute',function(pr){const t=DB().txns.find(function(x){return x.ref===pr.ref;});if(!t||disputeOf(t))return null;
   const html='<div class="card" style="display:flex;gap:12px;align-items:center"><span class="ico">'+ic(WICON[t.wallet]||'wallet')+'</span><div class="row-m"><div class="b">'+E(t.merchant)+'</div><div class="cap">'+E(t.ref)+' · '+E(MFmt.date(t.date))+' · '+E(walletName(t.wallet))+'</div></div><span class="b num">'+money(t.amount)+'</span></div>'

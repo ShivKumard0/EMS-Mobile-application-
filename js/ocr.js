@@ -102,21 +102,21 @@ const MOcr=(function(){
      them. An empty Expense Type is left for the person to pick. */
   const GUESS=[
     [/hotel|\binn\b|resort|lodge|residency|suites|stay|room\s*(no|charges|rent)|check-?in/i,'Accommodation','Accommodation','Hotel stay'],
-    [/indigo|air\s*india|vistara|akasa|spicejet|airlines?|boarding|flight|pnr/i,'Travel Reimbursement','Intercity Travel - Air','Flight'],
-    [/irctc|railway|\btrain\b/i,'Travel Reimbursement','Intercity Travel - Train','Train ticket'],
-    [/bus\s*ticket|redbus/i,'Travel Reimbursement','Intercity Travel - Bus','Bus ticket'],
-    [/\bmetro\b/i,'Travel Reimbursement','One Way','Metro ticket'],
-    [/uber|\bola\b|rapido|blusmart|cab|taxi(?!nvoice)|auto\s*rickshaw|\bride\b|trip\s*fare|meru|cityride/i,'Travel Reimbursement','One Way','Cab'],
-    [/parking|toll|fastag/i,'Travel Reimbursement','One Way','Parking / toll'],
-    [/petrol|diesel|fuel|indianoil|indian\s*oil|bharat\s*petroleum|\bbpcl\b|\bhpcl\b|hp\s*petrol|shell|nayara/i,'Fuel Reimbursement','','Fuel'],
-    [/restaurant|cafe|café|coffee|\btea\b|chai|kitchen|dhaba|food|swiggy|zomato|biryani|pizza|burger|bakery|lunch|dinner|breakfast|meal|bar\s*&|veg|thali/i,'Meal Allowance','','Meal'],
+    [/indigo|air\s*india|vistara|akasa|spicejet|airlines?|boarding|flight|pnr/i,'Travel & Transport','Intercity Travel - Air','Flight'],
+    [/irctc|railway|\btrain\b/i,'Travel & Transport','Intercity Travel - Train','Train ticket'],
+    [/bus\s*ticket|redbus/i,'Travel & Transport','Intercity Travel - Bus','Bus ticket'],
+    [/\bmetro\b/i,'Travel & Transport','One Way','Metro ticket'],
+    [/uber|\bola\b|rapido|blusmart|cab|taxi(?!nvoice)|auto\s*rickshaw|\bride\b|trip\s*fare|meru|cityride/i,'Travel & Transport','One Way','Cab'],
+    [/parking|toll|fastag/i,'Travel & Transport','One Way','Parking / toll'],
+    [/petrol|diesel|fuel|indianoil|indian\s*oil|bharat\s*petroleum|\bbpcl\b|\bhpcl\b|hp\s*petrol|shell|nayara/i,'Fuel & Vehicle Expenses','','Fuel'],
+    [/restaurant|cafe|café|coffee|\btea\b|chai|kitchen|dhaba|food|swiggy|zomato|biryani|pizza|burger|bakery|lunch|dinner|breakfast|meal|bar\s*&|veg|thali/i,'Meals & Refreshments','','Meal'],
     [/broadband|internet|fibernet|fibre|fiber|wi-?fi|mbps/i,'Telephone & Internet','Broadband','Internet bill'],
     [/airtel|\bjio\b|vodafone|\bvi\b|bsnl|postpaid|prepaid|recharge|mobile\s*bill/i,'Telephone & Internet','Mobile','Phone bill'],
-    [/stationery|xerox|print|copier|office\s*supplies|courier|amazon|flipkart|stationers/i,'Office Stationery','','Office supplies']];
+    [/stationery|xerox|print|copier|office\s*supplies|courier|amazon|flipkart|stationers/i,'Office Supplies & Services','','Office supplies']];
   /* The category with the most keyword hits wins (ties: the earlier one), so one stray word cannot decide it. */
   function guess(rows){const t=rows.join(' ');let best=null,bn=0;
     for(let i=0;i<GUESS.length;i++){const n=(t.match(new RegExp(GUESS[i][0].source,'gi'))||[]).length;if(n>bn){bn=n;best=GUESS[i];}}
-    if(best&&best[1]==='Meal Allowance'){const m=/breakfast|lunch|dinner/i.exec(t);if(m)return {subCat:best[1],expType:m[0].charAt(0).toUpperCase()+m[0].slice(1).toLowerCase(),what:best[3]};}
+    if(best&&best[1]==='Meals & Refreshments'){const m=/breakfast|lunch|dinner/i.exec(t);if(m)return {subCat:best[1],expType:m[0].charAt(0).toUpperCase()+m[0].slice(1).toLowerCase(),what:best[3]};}
     return best?{subCat:best[1],expType:best[2],what:best[3]}:{subCat:'',expType:'',what:''};}
   function parse(rows,today){
     const amount=findTotal(rows),g=guess(rows),merchant=findMerchant(rows);
