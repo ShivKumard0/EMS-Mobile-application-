@@ -410,3 +410,21 @@ html.dsk .sheet{max-height:calc(var(--vh) * 88)}
 /* A file that is not a photo (PDF, Word, Excel … from the web app): an icon in place of the thumbnail; a claim's attachments listed */
 .att-fi{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--slate)}
 .att-list{display:grid;gap:8px}
+
+/* The card face (product owner, 16 Nov 2026): the OpenDhi x RBL Bank Multi+ Corporate Card as designed, drawn as a
+   vector (assets/card-face.svg) so it is sharp at any size. The card's own details are written over it; sizes follow
+   the card's width (cqw). */
+.vc{padding:0;container-type:inline-size;background:#3a0c40 url(../assets/card-face.svg?v=20261116a) center/100% 100% no-repeat;box-shadow:0 10px 24px rgba(58,12,64,.28),inset 0 0 0 1px rgba(255,255,255,.06)}
+.vc-waves,.vc-top,.vc-prog,.vc-chip,.vc-mid>svg,.vc-net{display:none}
+.vc-mid{position:absolute;right:4.7cqw;top:13cqw;margin:0}
+.vc-num{position:absolute;left:10.3cqw;top:30.6cqw;margin:0;font-family:'Roboto Mono',Menlo,Consolas,'SFMono-Regular','Courier New',monospace;font-size:6.4cqw;font-weight:600;letter-spacing:.35cqw;word-spacing:1.7cqw;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.vc-row{position:static}
+.vc-who{position:absolute;left:10.3cqw;top:49.7cqw}
+.vc-who .vc-lbl{display:none}
+.vc-name{max-width:58cqw;font-size:4cqw;letter-spacing:.2cqw}
+.vc-row>div:nth-child(2){position:absolute;left:45.6cqw;top:41.5cqw;display:flex;align-items:center;gap:1.5cqw}
+.vc-row>div:nth-child(2) .vc-lbl{font-size:0;margin:0;opacity:.95}
+.vc-row>div:nth-child(2) .vc-lbl::before{content:"VALID\A UPTO";white-space:pre;display:block;text-align:right;font-size:1.9cqw;line-height:2.2cqw;font-weight:700;letter-spacing:.1cqw}
+.vc-exp{font-size:4.3cqw;letter-spacing:.2cqw}
+.vc-mid{top:12.4cqw}
+.vc-flag{font-size:2.9cqw;padding:.7cqw 2.3cqw;line-height:1.3}
